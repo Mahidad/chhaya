@@ -1,4 +1,4 @@
-# Chhaya (छाया) - Full-Stack Learning Platform
+# Chhaya – A Personalized Teaching Style Learning Platform
 
 Chhaya is a modular AI-assisted study and learning application.
 
