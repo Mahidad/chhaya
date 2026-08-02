@@ -1,0 +1,67 @@
+/*
+  Design tokens, copied 1:1 from the Figma export's `:root` block so the
+  React app matches the prototype exactly. If a designer updates a color
+  in Figma, this is the one place to update it here too.
+
+  WHY CSS VARIABLES INSTEAD OF A JS THEME OBJECT (styled-components/tailwind
+  config/etc.): the prototype was already built this way, so copying it
+  keeps a 1:1 mapping between "class name in the mockup" and "class name
+  in the React component" -- easier to compare the two side by side while
+  converting screen by screen.
+*/
+
+:root {
+  --ink: #101614;
+  --ink-2: #3c4a45;
+  --muted: #6b7873;
+  --faint: #94a19c;
+  --line: #e3e7e5;
+  --line-soft: #eff2f1;
+  --canvas: #f4f6f5;
+  --surface: #ffffff;
+
+  --primary: #0e6b54;
+  --primary-dark: #0a5443;
+  --primary-soft: #e2f0eb;
+
+  --sidebar: #0b1f1a;
+  --sidebar-2: #12332b;
+  --sidebar-text: #9fb5ae;
+
+  --amber: #c97a17;
+  --amber-soft: #fbeedc;
+  --iris: #3b4ea0;
+  --iris-soft: #e7eaf6;
+  --plum: #7a3e6b;
+  --plum-soft: #f2e7ef;
+  --danger: #b3261e;
+  --danger-soft: #fbe9e7;
+  --ok: #1f7a46;
+  --ok-soft: #e4f2e9;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--canvas);
+  font-family: "Inter", sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.bn {
+  font-family: "Hind Siliguri", "Inter", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}

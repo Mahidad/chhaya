@@ -1,0 +1,32 @@
+# Environment & Secret files
+.env
+.env.local
+.env.*.local
+
+# Python / Virtual Environment
+venv/
+.venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+
+# SQLite Database
+*.db
+chhaya.db
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.oxlintcache
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
