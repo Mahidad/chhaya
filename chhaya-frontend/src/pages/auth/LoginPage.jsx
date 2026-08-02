@@ -26,7 +26,15 @@ export default function LoginPage() {
       await login(email, password);
       navigate("/sources");
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not log in. Check your details and try again.");
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        const msg = detail.map((d) => d.msg || "Invalid input").join(". ");
+        setError(msg);
+      } else {
+        setError("Could not log in. Please check your credentials and try again.");
+      }
     }
   }
 

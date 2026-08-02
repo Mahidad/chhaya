@@ -10,13 +10,13 @@ model means "add a column to the DB" and "expose that column in the API"
 are two deliberate steps, not one accidental leak.
 """
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 class UserCreate(BaseModel):
-    full_name: str
+    full_name: str = Field(..., min_length=1, description="User's full name")
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, description="Password (at least 8 characters)")
 
 
 class UserOut(BaseModel):

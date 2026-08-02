@@ -14,19 +14,19 @@ That makes it trivial to unit test without spinning up the whole app.
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from passlib.context import CryptContext
-
+import bcrypt
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 def hash_password(plain_password: str) -> str:
-    return pwd_context.hash(plain_password)
+    pw_bytes = plain_password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pw_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    pw_bytes = plain_password.encode("utf-8")[:72]
+    hashed_bytes = hashed_password.encode("utf-8")
+    return bcrypt.checkpw(pw_bytes, hashed_bytes)
 
 
 def create_access_token(subject: str) -> str:

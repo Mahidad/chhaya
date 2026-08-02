@@ -17,11 +17,23 @@ export default function SignupPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
     try {
       await signup(fullName, email, password);
       navigate("/sources");
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not create your account.");
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        const msg = detail.map((d) => d.msg || "Invalid input").join(". ");
+        setError(msg);
+      } else {
+        setError("Could not create your account. Please try again.");
+      }
     }
   }
 
