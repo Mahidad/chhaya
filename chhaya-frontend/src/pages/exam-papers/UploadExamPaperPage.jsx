@@ -17,9 +17,10 @@ export default function UploadExamPaperPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) {
-      setError("Choose an image file to upload.");
+      setError("Choose an image or PDF file to upload.");
       return;
     }
+
     setError("");
     setSubmitting(true);
     try {
@@ -32,7 +33,7 @@ export default function UploadExamPaperPage() {
   }
 
   return (
-    <AppShell section="Mock exams" current="Upload paper">
+    <AppShell section="Upload questions" current="Upload paper">
       <div className="page-head">
         <div>
           <div className="page-title">Upload a past exam paper</div>
@@ -49,11 +50,12 @@ export default function UploadExamPaperPage() {
             <div className="upload-drop">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.pdf,application/pdf"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
                 style={{ marginBottom: 8 }}
               />
-              <div className="hint">JPG or PNG. Scanned PDFs aren't supported yet — see the backend README.</div>
+              <div className="hint">JPG, PNG, or PDF files.</div>
+
             </div>
           </div>
         </div>

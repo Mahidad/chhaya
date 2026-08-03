@@ -73,3 +73,14 @@ def get_paper_for_user(db: Session, *, user_id: str, paper_id: str) -> ExamPaper
     if not paper:
         raise NotFoundError("Exam paper not found.")
     return paper
+
+
+def delete_paper_for_user(db: Session, *, user_id: str, paper_id: str) -> None:
+    paper = get_paper_for_user(db, user_id=user_id, paper_id=paper_id)
+    if paper.file_path and os.path.exists(paper.file_path):
+        try:
+            os.remove(paper.file_path)
+        except OSError:
+            pass
+    exam_paper_repository.delete(db, id=paper.id)
+
