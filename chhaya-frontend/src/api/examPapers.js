@@ -29,3 +29,11 @@ export async function deleteExamPaper(id) {
   await client.delete(`/exam-papers/${id}`);
 }
 
+export async function getExamPaperFileBlob(id) {
+  const response = await client.get(`/exam-papers/${id}/file`, {
+    responseType: "blob",
+  });
+  return response.data;
+}
+
+
