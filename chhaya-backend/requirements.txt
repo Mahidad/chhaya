@@ -9,6 +9,7 @@ email-validator>=2.1
 # auth
 pyjwt>=2.8
 passlib[bcrypt]>=1.7
+bcrypt==4.0.1
 
 # database
 alembic>=1.13
@@ -17,3 +18,7 @@ psycopg2-binary>=2.9   # PostgreSQL driver - remove if you stay on SQLite locall
 # reference source ingestion (Group 1 / Mahidad)
 youtube-transcript-api>=0.6
 google-generativeai>=0.5
+
+#ocr
+pytesseract>=0.3
+Pillow>=10.0

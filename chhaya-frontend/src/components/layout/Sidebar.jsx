@@ -3,9 +3,8 @@ import Icon from "../icons/Icon";
 import logoBlack from "../../assets/logo-black.png";
 
 /*
-  The Figma export used a heartbeat/"pulse" icon as a placeholder brand
-  mark. Swapped here for the actual Chhaya jar logo. The mark's background
-  changed from solid green to white specifically so the logo's black
+  The mark's background changed from
+  solid green to white specifically so the logo's black
   linework stays visible against it -- black-on-green would have nearly
   disappeared at 32px. See the frontend notes in the handoff message for
   the couple of other spots (favicon, auth screen) using the white
@@ -18,7 +17,7 @@ const NAV_ITEMS = [
   { to: "/library", label: "Style library", icon: "library" },
   { to: "/guides", label: "Study guides", icon: "guides" },
   { to: "/concept-maps", label: "Concept maps", icon: "conceptMap" },
-  { to: "/exams", label: "Mock exams", icon: "exams" },
+  { to: "/exam-papers", label: "Mock exams", icon: "exams" },
 ];
 
 export default function Sidebar() {

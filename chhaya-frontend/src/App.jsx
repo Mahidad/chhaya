@@ -7,6 +7,14 @@ import SignupPage from "./pages/auth/SignupPage";
 import ReferenceSourcesListPage from "./pages/reference-sources/ReferenceSourcesListPage";
 import AddSourcePage from "./pages/reference-sources/AddSourcePage";
 import SourceDetailPage from "./pages/reference-sources/SourceDetailPage";
+import StyleLibraryPage from "./pages/style-library/StyleLibraryPage";
+import StudyGuidesListPage from "./pages/study-guides/StudyGuidesListPage";
+import ConfigureGuidePage from "./pages/study-guides/ConfigureGuidePage";
+import GuideDetailPage from "./pages/study-guides/GuideDetailPage";
+import ExamPapersListPage from "./pages/exam-papers/ExamPapersListPage";
+import UploadExamPaperPage from "./pages/exam-papers/UploadExamPaperPage";
+import ExamPaperDetailPage from "./pages/exam-papers/ExamPaperDetailPage";
+import WeakTopicsPage from "./pages/progress/WeakTopicsPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 
 /*
@@ -24,40 +32,26 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          <Route path="/" element={<Navigate to="/sources" replace />} />
+          <Route path="/" element={<ProtectedRoute><WeakTopicsPage /></ProtectedRoute>} />
 
-          <Route
-            path="/sources"
-            element={
-              <ProtectedRoute>
-                <ReferenceSourcesListPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sources/new"
-            element={
-              <ProtectedRoute>
-                <AddSourcePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sources/:id"
-            element={
-              <ProtectedRoute>
-                <SourceDetailPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/sources" element={<ProtectedRoute><ReferenceSourcesListPage /></ProtectedRoute>} />
+          <Route path="/sources/new" element={<ProtectedRoute><AddSourcePage /></ProtectedRoute>} />
+          <Route path="/sources/:id" element={<ProtectedRoute><SourceDetailPage /></ProtectedRoute>} />
 
-          <Route path="/library" element={<ProtectedRoute><ComingSoonPage title="Style library" /></ProtectedRoute>} />
-          <Route path="/guides" element={<ProtectedRoute><ComingSoonPage title="Study guides" /></ProtectedRoute>} />
+          <Route path="/library" element={<ProtectedRoute><StyleLibraryPage /></ProtectedRoute>} />
+
+          <Route path="/guides" element={<ProtectedRoute><StudyGuidesListPage /></ProtectedRoute>} />
+          <Route path="/guides/new" element={<ProtectedRoute><ConfigureGuidePage /></ProtectedRoute>} />
+          <Route path="/guides/:id" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
+
+          <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
+          <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />
+          <Route path="/exam-papers/:id" element={<ProtectedRoute><ExamPaperDetailPage /></ProtectedRoute>} />
+
           <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
-          <Route path="/exams" element={<ProtectedRoute><ComingSoonPage title="Mock exams" /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
-          <Route path="*" element={<Navigate to="/sources" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

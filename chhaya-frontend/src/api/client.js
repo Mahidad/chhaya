@@ -24,12 +24,10 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !error.config?.url?.includes("/auth/login")) {
+    if (error.response?.status === 401) {
       localStorage.removeItem("chhaya_token");
       localStorage.removeItem("chhaya_user");
-      if (window.location.pathname !== "/login" && window.location.pathname !== "/signup") {
-        window.location.href = "/login";
-      }
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
