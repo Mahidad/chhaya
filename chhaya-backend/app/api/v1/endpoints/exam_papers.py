@@ -61,3 +61,24 @@ def delete_exam_paper(
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
+
+@router.get("/{paper_id}/file")
+def get_exam_paper_file(
+    paper_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    import os
+    from fastapi.responses import FileResponse
+
+    try:
+        paper = exam_paper_service.get_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+    if not paper.file_path or not os.path.exists(paper.file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk.")
+
+    ext = os.path.splitext(paper.file_path)[1].lower()
+    media_type = "application/pdf" if ext == ".pdf" else f"image/{ext.lstrip('.') or 'png'}"
+    return FileResponse(paper.file_path, media_type=media_type)
+
+
