@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { to: "/library", label: "Style library", icon: "library" },
   { to: "/guides", label: "Study guides", icon: "guides" },
   { to: "/concept-maps", label: "Concept maps", icon: "conceptMap" },
-  { to: "/exam-papers", label: "Mock exams", icon: "exams" },
+  { to: "/exam-papers", label: "Upload questions", icon: "exams" },
 ];
 
 export default function Sidebar() {

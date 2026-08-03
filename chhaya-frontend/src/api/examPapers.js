@@ -24,3 +24,8 @@ export async function uploadExamPaper({ title, course, file }) {
   });
   return data;
 }
+
+export async function deleteExamPaper(id) {
+  await client.delete(`/exam-papers/${id}`);
+}
+

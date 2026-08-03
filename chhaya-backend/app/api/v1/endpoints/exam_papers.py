@@ -50,3 +50,14 @@ def get_exam_paper(
         return exam_paper_service.get_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_exam_paper(
+    paper_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    try:
+        exam_paper_service.delete_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
