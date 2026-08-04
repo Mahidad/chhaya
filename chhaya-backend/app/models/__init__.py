@@ -1,8 +1,6 @@
 """
-Importing every model here means `from app.models import *` (used in
-main.py to create tables, and by Alembic to autogenerate migrations)
-registers all tables on Base.metadata -- even ones no other file happens
-to import directly yet.
+Re-exports every model so `from app.models import User` etc. continue to
+work in any file that uses that import style.
 """
 
 from app.models.user import User
@@ -19,4 +17,10 @@ __all__ = [
     "SourceStatus",
     "SourceType",
     "TeacherProfile",
+    "StudyGuide",
+    "GuideStatus",
+    "GuideDepth",
+    "ExamPaper",
+    "ExamPaperStatus",
+    "QuizResult",
 ]

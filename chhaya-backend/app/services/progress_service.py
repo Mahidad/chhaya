@@ -11,15 +11,17 @@ and that's a completely legitimate shape too.
 
 from collections import defaultdict
 
-from sqlalchemy.orm import Session
+import psycopg
 
-from app.repositories.quiz_result_repository import quiz_result_repository
+from app.repositories.quiz_result_respository import quiz_result_repository
 from app.schemas.quiz_result import QuizResultCreate, WeakTopic
 
 WEAK_THRESHOLD_PERCENT = 60.0
 
 
-def record_quiz_result(db: Session, *, user_id: str, payload: QuizResultCreate):
+def record_quiz_result(
+    db: psycopg.Connection, *, user_id: str, payload: QuizResultCreate
+):
     return quiz_result_repository.create(
         db,
         obj_in={
@@ -31,7 +33,12 @@ def record_quiz_result(db: Session, *, user_id: str, payload: QuizResultCreate):
     )
 
 
-def get_weak_topics(db: Session, *, user_id: str, threshold: float = WEAK_THRESHOLD_PERCENT) -> list[WeakTopic]:
+def get_weak_topics(
+    db: psycopg.Connection,
+    *,
+    user_id: str,
+    threshold: float = WEAK_THRESHOLD_PERCENT,
+) -> list[WeakTopic]:
     results = quiz_result_repository.list_for_user(db, user_id=user_id)
 
     # Group every attempt by topic, so a topic taken 3 times becomes one

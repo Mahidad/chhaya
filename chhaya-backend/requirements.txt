@@ -1,6 +1,5 @@
 fastapi>=0.111
 uvicorn[standard]>=0.30
-sqlalchemy>=2.0
 pydantic>=2.7
 pydantic-settings>=2.3
 python-multipart>=0.0.9
@@ -11,15 +10,16 @@ pyjwt>=2.8
 passlib[bcrypt]>=1.7
 bcrypt==4.0.1
 
-# database
-alembic>=1.13
-psycopg2-binary>=2.9   # PostgreSQL driver - remove if you stay on SQLite locally
+# database — psycopg v3 with binary C extension + connection pool
+# "binary" provides the compiled C extension for performance;
+# "pool"   installs psycopg-pool (imported as psycopg_pool).
+psycopg[binary,pool]>=3.1
 
 # reference source ingestion (Group 1 / Mahidad)
 youtube-transcript-api>=0.6
 google-generativeai>=0.5
 
-#ocr
+# ocr
 pytesseract>=0.3
 Pillow>=10.0
 pdf2image>=1.17.0

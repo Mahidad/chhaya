@@ -1,5 +1,5 @@
+import psycopg
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/reference-sources", tags=["reference-sources"])
 @router.post("", response_model=ReferenceSourceOut, status_code=status.HTTP_201_CREATED)
 def create_reference_source(
     payload: ReferenceSourceCreate,
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -31,7 +31,8 @@ def create_reference_source(
 
 @router.get("", response_model=list[ReferenceSourceOut])
 def list_reference_sources(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     return reference_source_service.list_sources_for_user(db, user_id=current_user.id)
 
@@ -39,7 +40,7 @@ def list_reference_sources(
 @router.get("/{source_id}", response_model=ReferenceSourceOut)
 def get_reference_source(
     source_id: str,
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """The frontend's "analysing" screen polls this endpoint every couple
@@ -55,7 +56,7 @@ def get_reference_source(
 @router.get("/{source_id}/profile", response_model=TeacherProfileOut)
 def get_source_profile(
     source_id: str,
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -66,23 +67,30 @@ def get_source_profile(
     """
     # Confirms the source belongs to this user before leaking profile data.
     try:
-        reference_source_service.get_source_for_user(db, user_id=current_user.id, source_id=source_id)
+        reference_source_service.get_source_for_user(
+            db, user_id=current_user.id, source_id=source_id
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
     profile = teacher_profile_repository.get_by_source(db, source_id=source_id)
     if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No style profile yet for this source.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No style profile yet for this source.",
+        )
     return profile
 
 
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_reference_source(
     source_id: str,
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        reference_source_service.delete_source(db, user_id=current_user.id, source_id=source_id)
+        reference_source_service.delete_source(
+            db, user_id=current_user.id, source_id=source_id
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

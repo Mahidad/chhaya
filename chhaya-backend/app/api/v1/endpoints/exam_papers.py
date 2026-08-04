@@ -1,5 +1,5 @@
+import psycopg
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -16,7 +16,7 @@ async def upload_exam_paper(
     title: str = Form(...),
     course: str | None = Form(None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -38,47 +38,62 @@ async def upload_exam_paper(
 
 
 @router.get("", response_model=list[ExamPaperOut])
-def list_exam_papers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_exam_papers(
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return exam_paper_service.list_papers_for_user(db, user_id=current_user.id)
 
 
 @router.get("/{paper_id}", response_model=ExamPaperOut)
 def get_exam_paper(
-    paper_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    paper_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        return exam_paper_service.get_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
+        return exam_paper_service.get_paper_for_user(
+            db, user_id=current_user.id, paper_id=paper_id
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_exam_paper(
-    paper_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    paper_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
-        exam_paper_service.delete_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
+        exam_paper_service.delete_paper_for_user(
+            db, user_id=current_user.id, paper_id=paper_id
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 @router.get("/{paper_id}/file")
 def get_exam_paper_file(
-    paper_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    paper_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     import os
     from fastapi.responses import FileResponse
 
     try:
-        paper = exam_paper_service.get_paper_for_user(db, user_id=current_user.id, paper_id=paper_id)
+        paper = exam_paper_service.get_paper_for_user(
+            db, user_id=current_user.id, paper_id=paper_id
+        )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
     if not paper.file_path or not os.path.exists(paper.file_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk."
+        )
 
     ext = os.path.splitext(paper.file_path)[1].lower()
     media_type = "application/pdf" if ext == ".pdf" else f"image/{ext.lstrip('.') or 'png'}"
     return FileResponse(paper.file_path, media_type=media_type)
-
-

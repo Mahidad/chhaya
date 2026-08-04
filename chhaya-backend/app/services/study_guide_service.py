@@ -5,7 +5,7 @@ update status, handle failure. Same "runs synchronously for now" note
 applies here too -- see that file's docstring for the reasoning.
 """
 
-from sqlalchemy.orm import Session
+import psycopg
 
 from app.models.study_guide import StudyGuide, GuideStatus
 from app.repositories.study_guide_repository import study_guide_repository
@@ -15,7 +15,9 @@ from app.services.guide_generation_service import generate_guide_text, generate_
 from app.utils.exceptions import NotFoundError
 
 
-def create_and_generate(db: Session, *, user_id: str, payload: StudyGuideCreate) -> StudyGuide:
+def create_and_generate(
+    db: psycopg.Connection, *, user_id: str, payload: StudyGuideCreate
+) -> StudyGuide:
     # The interconnection point with Mahidad's Feature 3: this profile has
     # to exist and belong to this user, or there's no style to write in.
     profile = teacher_profile_repository.get(db, payload.teacher_profile_id)
@@ -36,9 +38,15 @@ def create_and_generate(db: Session, *, user_id: str, payload: StudyGuideCreate)
     )
 
     try:
-        guide = study_guide_repository.update(db, db_obj=guide, obj_in={"status": GuideStatus.GENERATING})
+        guide = study_guide_repository.update(
+            db, db_obj=guide, obj_in={"status": GuideStatus.GENERATING}
+        )
 
-        content = generate_guide_text(topic=payload.topic, depth=payload.depth, style=profile.raw_style_profile or {})
+        content = generate_guide_text(
+            topic=payload.topic,
+            depth=payload.depth,
+            style=profile.raw_style_profile or {},
+        )
         updates = {"content": content, "status": GuideStatus.READY}
 
         if payload.include_formula_sheet:
@@ -50,17 +58,23 @@ def create_and_generate(db: Session, *, user_id: str, payload: StudyGuideCreate)
         guide = study_guide_repository.update(db, db_obj=guide, obj_in=updates)
     except Exception as exc:  # noqa: BLE001
         guide = study_guide_repository.update(
-            db, db_obj=guide, obj_in={"status": GuideStatus.FAILED, "error_message": str(exc)}
+            db,
+            db_obj=guide,
+            obj_in={"status": GuideStatus.FAILED, "error_message": str(exc)},
         )
 
     return guide
 
 
-def list_guides_for_user(db: Session, *, user_id: str) -> list[StudyGuide]:
+def list_guides_for_user(
+    db: psycopg.Connection, *, user_id: str
+) -> list[StudyGuide]:
     return study_guide_repository.list_for_user(db, user_id=user_id)
 
 
-def get_guide_for_user(db: Session, *, user_id: str, guide_id: str) -> StudyGuide:
+def get_guide_for_user(
+    db: psycopg.Connection, *, user_id: str, guide_id: str
+) -> StudyGuide:
     guide = study_guide_repository.get_for_user(db, guide_id=guide_id, user_id=user_id)
     if not guide:
         raise NotFoundError("Study guide not found.")

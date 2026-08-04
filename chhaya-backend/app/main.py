@@ -1,12 +1,32 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
-from app.core.database import Base, engine
-import app.models  # noqa: F401 - registers every model on Base.metadata
+from app.core.database import pool
 
-app = FastAPI(title=settings.APP_NAME)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Opens the connection pool on startup and drains it on shutdown.
+
+    `wait=True` means the app won't start accepting requests until at
+    least one connection to PostgreSQL is confirmed healthy -- better to
+    fail fast at boot than to surface DB errors on the first real request.
+
+    Replaces the old `@app.on_event("startup")` + Base.metadata.create_all
+    pattern. Table creation is now handled outside the app by running:
+        psql -U <user> -d chhaya -f sql/schema.sql
+    """
+    pool.open(wait=True)
+    yield
+    pool.close()
+
+
+app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,18 +37,6 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
-
-@app.on_event("startup")
-def on_startup():
-    """
-    Dev convenience: creates any missing tables on boot.
-    Once the team is comfortable with Alembic (see /alembic), switch to
-    running `alembic upgrade head` instead of relying on this, especially
-    once there's real data you don't want to risk resetting. This line is
-    harmless either way -- it only creates tables that don't exist yet.
-    """
-    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/health", tags=["health"])

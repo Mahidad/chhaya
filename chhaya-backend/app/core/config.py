@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # --- Database ---
-    # Default is SQLite so a new teammate can `uvicorn app.main:app` with
-    # zero setup. Swap to Postgres for real use:
-    # postgresql+psycopg2://user:password@localhost:5432/chhaya
-    DATABASE_URL: str = "sqlite:///./chhaya.db"
+    # psycopg v3 DSN format: postgresql://USER:PASSWORD@HOST:PORT/DBNAME
+    # Copy .env.example to .env and set DATABASE_URL before starting.
+    # Run `psql -U <user> -d chhaya -f sql/schema.sql` to create tables.
+    DATABASE_URL: str = "postgresql://postgres@localhost:5432/chhaya"
 
     # --- Auth / JWT ---
     JWT_SECRET_KEY: str = "change-this-in-your-.env-file"

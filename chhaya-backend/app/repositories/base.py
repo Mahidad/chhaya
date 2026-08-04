@@ -1,61 +1,109 @@
 """
-A generic CRUD base class.
+Generic CRUD base — raw psycopg v3.
 
-WHY THIS EXISTS:
-This is the piece that directly answers "we need reusable CRUD patterns"
-for the no-AI live exam. Every table in Chhaya (sources, profiles, quizzes,
-flashcards, bookmarks...) needs the same five operations: get one, get
-many, create, update, delete. Writing that from scratch for all ~15 tables
-across 4 people's modules is repetitive and easy to get subtly wrong.
+Subclasses declare two class-level attributes:
+    _table : str           -- PostgreSQL table name (a hardcoded constant,
+                              never user input, so f-string interpolation is safe)
+    _model : type          -- Python dataclass to hydrate DB rows into
 
-Instead, each specific repository (e.g. ReferenceSourceRepository) just
-inherits from `BaseRepository` and gets get/get_multi/create/update/delete
-for free, then adds only the queries that are genuinely specific to that
-table (like "get all sources for this user").
+Inherited operations: get / create / update / delete.
+Domain-specific queries (list_for_user, get_by_email, …) live only in the
+relevant subclass, exactly as before.
 
-This is the *only* layer allowed to import `Session` and write `db.query(...)`.
-Services never touch the DB directly -- they call a repository.
+COMMIT POLICY:
+  None of these methods commit.  The single commit happens in `get_db()`
+  (app/core/database.py) after the entire request handler succeeds, giving
+  all-or-nothing semantics across multi-step service pipelines without any
+  extra work here.
+
+JSON / JSONB:
+  Any dict value in obj_in is wrapped in psycopg's `Jsonb` adapter so the
+  driver serialises it as JSON rather than Python repr.  This covers
+  `raw_style_profile` in teacher_profiles transparently.
 """
 
-from typing import Generic, TypeVar, Type, Any
+import uuid
+from typing import Generic, TypeVar, Type
 
-from sqlalchemy.orm import Session
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 ModelType = TypeVar("ModelType")
 
 
 class BaseRepository(Generic[ModelType]):
-    def __init__(self, model: Type[ModelType]):
-        self.model = model
+    _table: str           # set by every subclass
+    _model: Type[ModelType]  # set by every subclass
 
-    def get(self, db: Session, id: str) -> ModelType | None:
-        return db.query(self.model).filter(self.model.id == id).first()
+    # ------------------------------------------------------------------ #
+    #  Internal helpers                                                    #
+    # ------------------------------------------------------------------ #
 
-    def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100, **filters: Any
-    ) -> list[ModelType]:
-        query = db.query(self.model)
-        for field, value in filters.items():
-            query = query.filter(getattr(self.model, field) == value)
-        return query.offset(skip).limit(limit).all()
+    def _row_to_obj(self, row: dict | None) -> ModelType | None:
+        """Convert a dict_row from psycopg into the target dataclass."""
+        if row is None:
+            return None
+        return self._model(**row)
 
-    def create(self, db: Session, *, obj_in: dict) -> ModelType:
-        db_obj = self.model(**obj_in)
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+    @staticmethod
+    def _wrap_json(data: dict) -> dict:
+        """
+        Wrap any dict-typed value in Jsonb so psycopg sends it as JSON
+        to a JSONB column.  Non-dict values (str, int, bool, None …)
+        pass through unchanged.
+        """
+        return {
+            k: Jsonb(v) if isinstance(v, dict) else v
+            for k, v in data.items()
+        }
 
-    def update(self, db: Session, *, db_obj: ModelType, obj_in: dict) -> ModelType:
-        for field, value in obj_in.items():
-            setattr(db_obj, field, value)
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+    # ------------------------------------------------------------------ #
+    #  Generic CRUD                                                        #
+    # ------------------------------------------------------------------ #
 
-    def delete(self, db: Session, *, id: str) -> None:
-        obj = self.get(db, id)
-        if obj:
-            db.delete(obj)
-            db.commit()
+    def get(self, db: psycopg.Connection, id: str) -> ModelType | None:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                f"SELECT * FROM {self._table} WHERE id = %s",
+                (id,),
+            )
+            return self._row_to_obj(cur.fetchone())
+
+    def create(self, db: psycopg.Connection, *, obj_in: dict) -> ModelType:
+        # Always generate the PK client-side so RETURNING * gives us the
+        # full row (including server defaults such as created_at) without
+        # a separate SELECT.
+        data = self._wrap_json({"id": str(uuid.uuid4()), **obj_in})
+        cols = list(data.keys())
+        sql = (
+            f"INSERT INTO {self._table} ({', '.join(cols)}) "
+            f"VALUES ({', '.join(['%s'] * len(cols))}) "
+            f"RETURNING *"
+        )
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, [data[c] for c in cols])
+            return self._row_to_obj(cur.fetchone())
+
+    def update(
+        self, db: psycopg.Connection, *, db_obj: ModelType, obj_in: dict
+    ) -> ModelType:
+        data = self._wrap_json(obj_in)
+        set_clauses = [f"{col} = %s" for col in data.keys()]
+        values = list(data.values()) + [db_obj.id]
+        sql = (
+            f"UPDATE {self._table} "
+            f"SET {', '.join(set_clauses)} "
+            f"WHERE id = %s "
+            f"RETURNING *"
+        )
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(sql, values)
+            return self._row_to_obj(cur.fetchone())
+
+    def delete(self, db: psycopg.Connection, *, id: str) -> None:
+        with db.cursor() as cur:
+            cur.execute(
+                f"DELETE FROM {self._table} WHERE id = %s",
+                (id,),
+            )
