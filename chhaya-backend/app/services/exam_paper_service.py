@@ -14,14 +14,16 @@ demoed with real past-paper PDFs, since that's the realistic input format.
 import os
 import uuid
 
-from sqlalchemy.orm import Session
+import psycopg
 
 from app.models.exam_paper import ExamPaper, ExamPaperStatus
 from app.repositories.exam_paper_repository import exam_paper_repository
 from app.utils.exceptions import NotFoundError
 from app.utils.ocr import extract_text_from_image
 
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "exam_papers")
+UPLOAD_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "exam_papers"
+)
 
 
 def _save_upload(file_bytes: bytes, original_filename: str) -> str:
@@ -35,7 +37,13 @@ def _save_upload(file_bytes: bytes, original_filename: str) -> str:
 
 
 def create_and_process(
-    db: Session, *, user_id: str, title: str, course: str | None, file_bytes: bytes, filename: str
+    db: psycopg.Connection,
+    *,
+    user_id: str,
+    title: str,
+    course: str | None,
+    file_bytes: bytes,
+    filename: str,
 ) -> ExamPaper:
     file_path = _save_upload(file_bytes, filename)
 
@@ -51,31 +59,45 @@ def create_and_process(
     )
 
     try:
-        paper = exam_paper_repository.update(db, db_obj=paper, obj_in={"status": ExamPaperStatus.PROCESSING})
+        paper = exam_paper_repository.update(
+            db, db_obj=paper, obj_in={"status": ExamPaperStatus.PROCESSING}
+        )
         text = extract_text_from_image(file_path)
         paper = exam_paper_repository.update(
-            db, db_obj=paper, obj_in={"extracted_text": text, "status": ExamPaperStatus.READY}
+            db,
+            db_obj=paper,
+            obj_in={"extracted_text": text, "status": ExamPaperStatus.READY},
         )
     except Exception as exc:  # noqa: BLE001
         paper = exam_paper_repository.update(
-            db, db_obj=paper, obj_in={"status": ExamPaperStatus.FAILED, "error_message": str(exc)}
+            db,
+            db_obj=paper,
+            obj_in={"status": ExamPaperStatus.FAILED, "error_message": str(exc)},
         )
 
     return paper
 
 
-def list_papers_for_user(db: Session, *, user_id: str) -> list[ExamPaper]:
+def list_papers_for_user(
+    db: psycopg.Connection, *, user_id: str
+) -> list[ExamPaper]:
     return exam_paper_repository.list_for_user(db, user_id=user_id)
 
 
-def get_paper_for_user(db: Session, *, user_id: str, paper_id: str) -> ExamPaper:
-    paper = exam_paper_repository.get_for_user(db, paper_id=paper_id, user_id=user_id)
+def get_paper_for_user(
+    db: psycopg.Connection, *, user_id: str, paper_id: str
+) -> ExamPaper:
+    paper = exam_paper_repository.get_for_user(
+        db, paper_id=paper_id, user_id=user_id
+    )
     if not paper:
         raise NotFoundError("Exam paper not found.")
     return paper
 
 
-def delete_paper_for_user(db: Session, *, user_id: str, paper_id: str) -> None:
+def delete_paper_for_user(
+    db: psycopg.Connection, *, user_id: str, paper_id: str
+) -> None:
     paper = get_paper_for_user(db, user_id=user_id, paper_id=paper_id)
     if paper.file_path and os.path.exists(paper.file_path):
         try:
@@ -83,4 +105,3 @@ def delete_paper_for_user(db: Session, *, user_id: str, paper_id: str) -> None:
         except OSError:
             pass
     exam_paper_repository.delete(db, id=paper.id)
-

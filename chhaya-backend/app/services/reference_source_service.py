@@ -5,7 +5,7 @@ transcript -> analyze style -> store a TeacherProfile.
 WHY THIS LIVES IN A SERVICE, NOT THE ROUTE:
 The route (app/api/v1/endpoints/reference_sources.py) only knows about
 HTTP: request in, response out. This function knows nothing about HTTP --
-it takes a db session and plain arguments, and could be called from a
+it takes a db connection and plain arguments, and could be called from a
 route, a background worker, a CLI script, or a test, identically.
 
 CURRENT LIMITATION (documented, not hidden): this runs synchronously
@@ -17,7 +17,7 @@ status field and polling GET endpoint are already built so that swap
 doesn't change the API contract -- only what happens inside this function.
 """
 
-from sqlalchemy.orm import Session
+import psycopg
 
 from app.models.reference_source import ReferenceSource, SourceStatus
 from app.repositories.reference_source_repository import (
@@ -31,7 +31,9 @@ from app.utils.exceptions import NotFoundError
 from app.utils.youtube import extract_video_id, fetch_transcript_text, TranscriptUnavailableError
 
 
-def create_and_process(db: Session, *, user_id: str, payload: ReferenceSourceCreate) -> ReferenceSource:
+def create_and_process(
+    db: psycopg.Connection, *, user_id: str, payload: ReferenceSourceCreate
+) -> ReferenceSource:
     source = reference_source_repository.create(
         db,
         obj_in={
@@ -89,27 +91,37 @@ def create_and_process(db: Session, *, user_id: str, payload: ReferenceSourceCre
 
     except TranscriptUnavailableError as exc:
         source = reference_source_repository.update(
-            db, db_obj=source, obj_in={"status": SourceStatus.FAILED, "error_message": str(exc)}
+            db,
+            db_obj=source,
+            obj_in={"status": SourceStatus.FAILED, "error_message": str(exc)},
         )
     except Exception as exc:  # noqa: BLE001 - ingestion must never crash the request unhandled
         source = reference_source_repository.update(
-            db, db_obj=source, obj_in={"status": SourceStatus.FAILED, "error_message": str(exc)}
+            db,
+            db_obj=source,
+            obj_in={"status": SourceStatus.FAILED, "error_message": str(exc)},
         )
 
     return source
 
 
-def get_source_for_user(db: Session, *, user_id: str, source_id: str) -> ReferenceSource:
-    source = reference_source_repository.get_for_user(db, source_id=source_id, user_id=user_id)
+def get_source_for_user(
+    db: psycopg.Connection, *, user_id: str, source_id: str
+) -> ReferenceSource:
+    source = reference_source_repository.get_for_user(
+        db, source_id=source_id, user_id=user_id
+    )
     if not source:
         raise NotFoundError("Reference source not found.")
     return source
 
 
-def list_sources_for_user(db: Session, *, user_id: str) -> list[ReferenceSource]:
+def list_sources_for_user(
+    db: psycopg.Connection, *, user_id: str
+) -> list[ReferenceSource]:
     return reference_source_repository.list_for_user(db, user_id=user_id)
 
 
-def delete_source(db: Session, *, user_id: str, source_id: str) -> None:
-    source = get_source_for_user(db, user_id=user_id, source_id=source_id)  # raises if not found/not yours
+def delete_source(db: psycopg.Connection, *, user_id: str, source_id: str) -> None:
+    source = get_source_for_user(db, user_id=user_id, source_id=source_id)
     reference_source_repository.delete(db, id=source.id)

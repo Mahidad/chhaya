@@ -1,5 +1,5 @@
+import psycopg
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/progress", tags=["progress"])
 @router.post("/quiz-results", response_model=QuizResultOut, status_code=201)
 def record_quiz_result(
     payload: QuizResultCreate,
-    db: Session = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -25,5 +25,8 @@ def record_quiz_result(
 
 
 @router.get("/weak-topics", response_model=list[WeakTopic])
-def get_weak_topics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_weak_topics(
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     return progress_service.get_weak_topics(db, user_id=current_user.id)

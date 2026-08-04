@@ -1,21 +1,14 @@
 """
-Feature (Omar, Module 1 item 3): upload and OCR past exam papers.
+ExamPaper dataclass — replaces the SQLAlchemy ORM model.
 
-Standalone from Mahidad's tables today -- no foreign key into
-reference_sources or teacher_profiles. It becomes load-bearing for
-Module 2/3 later (predicting likely exam questions, matching quiz format),
-but for Module 1 it's self-contained: upload a scan, get text back.
+`file_path` is intentionally kept here (it's a server-side storage detail)
+even though it is excluded from `ExamPaperOut` so it never reaches the
+frontend.  The exam-papers endpoint uses it to serve the raw file and to
+clean up on delete.
 """
 
-import uuid
-from datetime import datetime, timezone
-
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text
-from app.core.database import Base
-
-
-def _uuid() -> str:
-    return str(uuid.uuid4())
+from dataclasses import dataclass
+from datetime import datetime
 
 
 class ExamPaperStatus:
@@ -25,18 +18,14 @@ class ExamPaperStatus:
     FAILED = "failed"
 
 
-class ExamPaper(Base):
-    __tablename__ = "exam_papers"
-
-    id = Column(String, primary_key=True, default=_uuid)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-
-    title = Column(String, nullable=False)
-    course = Column(String, nullable=True)
-    file_path = Column(String, nullable=False)  # where the uploaded scan is stored on disk
-
-    status = Column(String, nullable=False, default=ExamPaperStatus.PENDING)
-    error_message = Column(String, nullable=True)
-    extracted_text = Column(Text, nullable=True)
-
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+@dataclass
+class ExamPaper:
+    id: str
+    user_id: str
+    title: str
+    file_path: str
+    status: str
+    created_at: datetime
+    course: str | None = None
+    error_message: str | None = None
+    extracted_text: str | None = None

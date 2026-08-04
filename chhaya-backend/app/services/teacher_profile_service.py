@@ -8,7 +8,7 @@ do much, it shouldn't pretend to. The value of the layer is consistency
 (every feature has one), not that every service is complicated.
 """
 
-from sqlalchemy.orm import Session
+import psycopg
 
 from app.models.teacher_profile import TeacherProfile
 from app.repositories.teacher_profile_repository import teacher_profile_repository
@@ -16,11 +16,15 @@ from app.schemas.teacher_profile import TeacherProfileUpdate
 from app.utils.exceptions import NotFoundError
 
 
-def list_profiles_for_user(db: Session, *, user_id: str) -> list[TeacherProfile]:
+def list_profiles_for_user(
+    db: psycopg.Connection, *, user_id: str
+) -> list[TeacherProfile]:
     return teacher_profile_repository.list_for_user(db, user_id=user_id)
 
 
-def _get_owned_profile(db: Session, *, user_id: str, profile_id: str) -> TeacherProfile:
+def _get_owned_profile(
+    db: psycopg.Connection, *, user_id: str, profile_id: str
+) -> TeacherProfile:
     """Shared by update and delete: fetch a profile and make sure it's
     actually this user's before doing anything to it. Centralizing this
     check here (instead of copy-pasting it into both endpoints) means
@@ -32,7 +36,11 @@ def _get_owned_profile(db: Session, *, user_id: str, profile_id: str) -> Teacher
 
 
 def update_profile(
-    db: Session, *, user_id: str, profile_id: str, payload: TeacherProfileUpdate
+    db: psycopg.Connection,
+    *,
+    user_id: str,
+    profile_id: str,
+    payload: TeacherProfileUpdate,
 ) -> TeacherProfile:
     profile = _get_owned_profile(db, user_id=user_id, profile_id=profile_id)
     # exclude_unset=True: only the fields the client actually sent get
@@ -41,6 +49,8 @@ def update_profile(
     return teacher_profile_repository.update(db, db_obj=profile, obj_in=changes)
 
 
-def delete_profile(db: Session, *, user_id: str, profile_id: str) -> None:
+def delete_profile(
+    db: psycopg.Connection, *, user_id: str, profile_id: str
+) -> None:
     profile = _get_owned_profile(db, user_id=user_id, profile_id=profile_id)
     teacher_profile_repository.delete(db, id=profile.id)

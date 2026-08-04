@@ -1,42 +1,52 @@
 """
-Sets up the SQLAlchemy engine and session factory.
+psycopg v3 connection pool — replaces the SQLAlchemy engine/session.
 
-WHY THIS FILE EXISTS:
-Every repository (app/repositories/*) needs a `Session` to talk to the
-database. Rather than each file creating its own connection, they all pull
-a session from `get_db()`, which FastAPI calls automatically per-request via
-`Depends(get_db)`.
+ARCHITECTURE:
+  • One `ConnectionPool` is created at module level (closed) and opened
+    during FastAPI's lifespan startup (app/main.py).
+  • `get_db()` is a FastAPI dependency generator: it borrows one connection
+    from the pool, yields it to the route handler, then commits on success
+    or rolls back on any exception before returning the connection to the pool.
+  • Every repository method receives this connection as `db` — identical
+    call-site signature to the old `Session`, so service code is unchanged.
 
-Think of `engine` as the phone line to Postgres, and each `Session` as one
-phone call: opened at the start of a request, used for however many
-queries that request needs, then always hung up (closed) in the `finally`
-block below -- even if the request raised an error halfway through.
+TRANSACTION MODEL:
+  All SQL within a single HTTP request shares one connection (and therefore
+  one transaction). The repository methods do NOT commit; only `get_db()`
+  commits, once, after the entire handler succeeds. This gives us
+  all-or-nothing semantics across multi-step service pipelines (e.g.
+  create source → ingest videos → create teacher_profile) for free.
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from psycopg_pool import ConnectionPool
 
 from app.core.config import settings
 
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    # SQLite needs this flag to allow use across FastAPI's threadpool.
-    # Postgres doesn't need it, so we only set it conditionally.
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Every SQLAlchemy model (app/models/*) inherits from this Base so that
-# Base.metadata knows about every table for create_all() / Alembic.
-Base = declarative_base()
+# Pool is intentionally created in the "closed" state here and opened
+# during the FastAPI lifespan (see app/main.py).  This keeps module import
+# side-effects minimal and lets the lifespan control the exact moment the
+# first real DB connection is attempted.
+pool: ConnectionPool = ConnectionPool(
+    conninfo=settings.DATABASE_URL,
+    min_size=1,
+    max_size=10,
+    open=False,          # opened explicitly in lifespan
+)
 
 
 def get_db():
-    """FastAPI dependency: yields one DB session per request, always closes it."""
-    db = SessionLocal()
+    """
+    FastAPI dependency: yields one psycopg Connection per request.
+
+    Usage in an endpoint:
+        db: psycopg.Connection = Depends(get_db)
+    """
+    conn = pool.getconn()
     try:
-        yield db
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
-        db.close()
+        pool.putconn(conn)

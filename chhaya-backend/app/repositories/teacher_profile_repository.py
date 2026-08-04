@@ -1,15 +1,33 @@
-from sqlalchemy.orm import Session
+import psycopg
+from psycopg.rows import dict_row
 
 from app.models.teacher_profile import TeacherProfile
 from app.repositories.base import BaseRepository
 
 
 class TeacherProfileRepository(BaseRepository[TeacherProfile]):
-    def get_by_source(self, db: Session, *, source_id: str) -> TeacherProfile | None:
-        return db.query(TeacherProfile).filter(TeacherProfile.source_id == source_id).first()
+    _table = "teacher_profiles"
+    _model = TeacherProfile
 
-    def list_for_user(self, db: Session, *, user_id: str) -> list[TeacherProfile]:
-        return db.query(TeacherProfile).filter(TeacherProfile.user_id == user_id).all()
+    def get_by_source(
+        self, db: psycopg.Connection, *, source_id: str
+    ) -> TeacherProfile | None:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM teacher_profiles WHERE source_id = %s",
+                (source_id,),
+            )
+            return self._row_to_obj(cur.fetchone())
+
+    def list_for_user(
+        self, db: psycopg.Connection, *, user_id: str
+    ) -> list[TeacherProfile]:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM teacher_profiles WHERE user_id = %s ORDER BY created_at DESC",
+                (user_id,),
+            )
+            return [self._row_to_obj(row) for row in cur.fetchall()]
 
 
-teacher_profile_repository = TeacherProfileRepository(TeacherProfile)
+teacher_profile_repository = TeacherProfileRepository()

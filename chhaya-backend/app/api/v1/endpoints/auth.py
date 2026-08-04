@@ -1,6 +1,6 @@
+import psycopg
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def signup(payload: UserCreate, db: Session = Depends(get_db)):
+def signup(payload: UserCreate, db: psycopg.Connection = Depends(get_db)):
     try:
         return auth_service.signup(db, payload)
     except ValueError as exc:
@@ -22,7 +22,10 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: psycopg.Connection = Depends(get_db),
+):
     """
     Uses OAuth2PasswordRequestForm (form fields `username` + `password`,
     not JSON) because that's what makes the interactive /docs "Authorize"
