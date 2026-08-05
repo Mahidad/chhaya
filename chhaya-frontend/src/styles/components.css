@@ -1187,3 +1187,54 @@
   }
 }
 
+/* ---------- analytics dashboard (Amiyo – Module 1 Feature 4) ---------- */
+
+/* Three summary cards side by side, wrapping on narrow screens */
+.analytics-summary-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.analytics-summary-card {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Metric label ("Sessions this week") */
+.analytics-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+/* Large numeric value */
+.analytics-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Small unit text ("min", "views") beside the number */
+.analytics-card-unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Trend sentence below the number */
+.analytics-card-trend {
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 8px;
+  line-height: 1.4;
+}

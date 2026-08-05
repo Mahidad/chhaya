@@ -4,6 +4,7 @@ import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import Icon from "../../components/icons/Icon";
 import { getStudyGuide } from "../../api/studyGuides";
+import { recordGuideView } from "../../api/progress"; // Module 1 Feature 4 – analytics
 
 export default function GuideDetailPage() {
   const { id } = useParams();
@@ -24,6 +25,15 @@ export default function GuideDetailPage() {
     tick();
     return () => { cancelled = true; clearTimeout(timer); };
   }, [id]);
+
+  // Record a guide-view event for analytics once the guide finishes loading.
+  // Fire-and-forget: errors are swallowed so a tracking failure never
+  // disrupts the actual guide view (Amiyo's Module 1 Feature 4).
+  useEffect(() => {
+    if (guide && guide.status === "done") {
+      recordGuideView(id).catch(() => {});
+    }
+  }, [guide?.status, id]);
 
   if (!guide) {
     return (

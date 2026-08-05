@@ -3,6 +3,9 @@
 -- Run against a fresh database:
 --   psql -U <user> -d chhaya -f sql/schema.sql
 --
+-- Module 1 Feature 4 (Amiyo): study_sessions + study_guide_views
+--   added 2026-08-05. quiz_results removed (was wrong feature).
+--
 -- Safe to re-run: every statement uses IF NOT EXISTS / IF EXISTS.
 -- gen_random_uuid() requires the pgcrypto extension (bundled with every
 -- standard Postgres install since v8.3).
@@ -119,16 +122,40 @@ CREATE TABLE IF NOT EXISTS exam_papers (
 CREATE INDEX IF NOT EXISTS idx_exam_papers_user_id ON exam_papers (user_id);
 
 -- ---------------------------------------------------------------------------
--- quiz_results
--- One row per quiz attempt; aggregated by progress_service into weak topics.
+-- study_sessions  (Module 1 Feature 4 – Amiyo)
+-- One row per learning session a student opens.
+-- started_at is set on INSERT; ended_at + duration_secs are set when the
+-- student closes the session via PUT /progress/study-sessions/{id}/end.
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS quiz_results (
-    id            TEXT             PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    user_id       TEXT             NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    topic         TEXT             NOT NULL,
-    course        TEXT,
-    score_percent DOUBLE PRECISION NOT NULL,
-    taken_at      TIMESTAMPTZ      NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS study_sessions (
+    id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id       TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at      TIMESTAMPTZ,
+    duration_secs INTEGER,    -- seconds; NULL while session is still open
+    is_seed       BOOLEAN     NOT NULL DEFAULT FALSE  -- TRUE for demo data inserted by /seed-sample-data
 );
 
-CREATE INDEX IF NOT EXISTS idx_quiz_results_user_id ON quiz_results (user_id);
+CREATE INDEX IF NOT EXISTS idx_study_sessions_user_id    ON study_sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_study_sessions_started_at ON study_sessions (started_at);
+-- Add is_seed to existing tables that were created before this column existed
+ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ---------------------------------------------------------------------------
+-- study_guide_views  (Module 1 Feature 4 – Amiyo)
+-- One row each time a student opens a completed guide's detail page.
+-- Recorded silently (fire-and-forget) by GuideDetailPage.jsx via
+-- POST /progress/study-guide-views.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS study_guide_views (
+    id              TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id         TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    study_guide_id  TEXT        NOT NULL,
+    viewed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_seed         BOOLEAN     NOT NULL DEFAULT FALSE  -- TRUE for demo data inserted by /seed-sample-data
+);
+
+CREATE INDEX IF NOT EXISTS idx_study_guide_views_user_id  ON study_guide_views (user_id);
+CREATE INDEX IF NOT EXISTS idx_study_guide_views_viewed_at ON study_guide_views (viewed_at);
+-- Add is_seed to existing tables that were created before this column existed
+ALTER TABLE study_guide_views ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE;

@@ -14,8 +14,9 @@ import GuideDetailPage from "./pages/study-guides/GuideDetailPage";
 import ExamPapersListPage from "./pages/exam-papers/ExamPapersListPage";
 import UploadExamPaperPage from "./pages/exam-papers/UploadExamPaperPage";
 import ExamPaperDetailPage from "./pages/exam-papers/ExamPaperDetailPage";
-import WeakTopicsPage from "./pages/progress/WeakTopicsPage";
+import AnalyticsDashboardPage from "./pages/progress/AnalyticsDashboardPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import SessionTracker from "./components/SessionTracker";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -28,11 +29,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/* SessionTracker lives OUTSIDE <Routes> so React Router doesn't break,
+            but INSIDE <AuthProvider> so it can read auth state.
+            It mounts once per login and never re-mounts on page navigation. */}
+        <SessionTracker />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          <Route path="/" element={<ProtectedRoute><WeakTopicsPage /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
 
           <Route path="/sources" element={<ProtectedRoute><ReferenceSourcesListPage /></ProtectedRoute>} />
           <Route path="/sources/new" element={<ProtectedRoute><AddSourcePage /></ProtectedRoute>} />
