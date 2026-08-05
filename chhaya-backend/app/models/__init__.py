@@ -8,7 +8,7 @@ from app.models.reference_source import ReferenceSource, Video, SourceStatus, So
 from app.models.teacher_profile import TeacherProfile
 from app.models.study_guide import StudyGuide, GuideStatus, GuideDepth
 from app.models.exam_paper import ExamPaper, ExamPaperStatus
-from app.models.quiz_result import QuizResult
+from app.models.analytics import StudySession, StudyGuideView
 
 __all__ = [
     "User",
@@ -22,5 +22,6 @@ __all__ = [
     "GuideDepth",
     "ExamPaper",
     "ExamPaperStatus",
-    "QuizResult",
+    "StudySession",
+    "StudyGuideView",
 ]
