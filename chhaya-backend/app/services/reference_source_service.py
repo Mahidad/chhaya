@@ -54,7 +54,9 @@ def create_and_process(
         # scope for this first pass -- see docstring above. Single video
         # today; TODO extend to enumerate playlist entries.
         video_id = extract_video_id(payload.url)
-        transcript_text = fetch_transcript_text(video_id)
+        transcript_text = fetch_transcript_text(
+            video_id, skip_short=getattr(payload, "skip_short", False)
+        )
 
         video_repository.bulk_create(
             db,
@@ -124,4 +126,22 @@ def list_sources_for_user(
 
 def delete_source(db: psycopg.Connection, *, user_id: str, source_id: str) -> None:
     source = get_source_for_user(db, user_id=user_id, source_id=source_id)
-    reference_source_repository.delete(db, id=source.id)
+    with db.cursor() as cur:
+        cur.execute("DELETE FROM study_guides WHERE teacher_profile_id IN (SELECT id FROM teacher_profiles WHERE source_id = %s);", (source.id,))
+        cur.execute("DELETE FROM teacher_profiles WHERE source_id = %s;", (source.id,))
+        cur.execute("DELETE FROM videos WHERE source_id = %s;", (source.id,))
+        cur.execute("DELETE FROM reference_sources WHERE id = %s;", (source.id,))
+
+
+def rename_source(
+    db: psycopg.Connection, *, user_id: str, source_id: str, title: str
+) -> ReferenceSource:
+    source = get_source_for_user(db, user_id=user_id, source_id=source_id)
+    updated_source = reference_source_repository.update(
+        db, db_obj=source, obj_in={"title": title}
+    )
+    # Also update associated teacher profile display name if present
+    profile = teacher_profile_repository.get_by_source(db, source_id=source_id)
+    if profile:
+        teacher_profile_repository.update(db, db_obj=profile, obj_in={"display_name": title})
+    return updated_source

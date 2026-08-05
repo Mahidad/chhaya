@@ -10,6 +10,10 @@ class StudyGuideCreate(BaseModel):
     include_bangla: bool = False
 
 
+class StudyGuideUpdate(BaseModel):
+    topic: str
+
+
 class StudyGuideOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

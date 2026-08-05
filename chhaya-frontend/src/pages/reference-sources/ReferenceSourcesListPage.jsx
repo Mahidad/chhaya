@@ -5,16 +5,8 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { Card } from "../../components/ui/Card";
 import Icon from "../../components/icons/Icon";
-import { listReferenceSources } from "../../api/referenceSources";
-
-/*
-  This page covers TWO Figma states (mahidad-f1-01-empty.html for zero
-  sources) plus a populated grid the mockups didn't include a screen for
-  (the export only showed the empty state for the list view). The card
-  design below reuses the same `.thumb` / `.src-title` / badge classes
-  from the detail screens so it doesn't feel invented -- it borrows the
-  vocabulary that already exists elsewhere in the mockup.
-*/
+import { TextField } from "../../components/ui/Field";
+import { listReferenceSources, deleteReferenceSource, renameReferenceSource } from "../../api/referenceSources";
 
 const STATUS_BADGE = {
   pending: { variant: undefined, label: "Pending" },
@@ -25,11 +17,29 @@ const STATUS_BADGE = {
 
 export default function ReferenceSourcesListPage() {
   const [sources, setSources] = useState(null); // null = loading
+  const [deletingSource, setDeletingSource] = useState(null);
+  const [renamingSource, setRenamingSource] = useState(null);
   const navigate = useNavigate();
 
+  const refresh = () => listReferenceSources().then(setSources).catch(() => setSources([]));
+
   useEffect(() => {
-    listReferenceSources().then(setSources).catch(() => setSources([]));
+    refresh();
   }, []);
+
+  async function handleConfirmDelete() {
+    if (!deletingSource) return;
+    await deleteReferenceSource(deletingSource.id);
+    setDeletingSource(null);
+    refresh();
+  }
+
+  async function handleConfirmRename(newTitle) {
+    if (!renamingSource) return;
+    await renameReferenceSource(renamingSource.id, newTitle);
+    setRenamingSource(null);
+    refresh();
+  }
 
   if (sources === null) {
     return (
@@ -111,14 +121,38 @@ export default function ReferenceSourcesListPage() {
             const status = STATUS_BADGE[source.status] || STATUS_BADGE.pending;
             return (
               <Link key={source.id} to={`/sources/${source.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <Card className="card-pad" style={{ height: "100%" }}>
+                <Card className="card-pad" style={{ height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
                   <div className="thumb">
                     <Icon name="sources" size={26} strokeWidth="1.6" />
                   </div>
-                  <div className="src-title">{source.title}</div>
-                  <div className="src-meta">
+                  <div className="src-title" style={{ marginTop: 12 }}>{source.title}</div>
+                  <div className="src-meta" style={{ marginTop: 8 }}>
                     <Badge variant={status.variant}>{status.label}</Badge>
-                    <span>{source.videos.length} video{source.videos.length === 1 ? "" : "s"}</span>
+                    <span>{source.videos?.length || 0} video{(source.videos?.length || 0) === 1 ? "" : "s"}</span>
+                  </div>
+                  <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--line-soft)" }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRenamingSource(source);
+                      }}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeletingSource(source);
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </Card>
               </Link>
@@ -126,6 +160,93 @@ export default function ReferenceSourcesListPage() {
           })}
         </div>
       )}
+
+      {deletingSource && (
+        <DeleteDialog
+          item={deletingSource}
+          onCancel={() => setDeletingSource(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
+
+      {renamingSource && (
+        <RenameDialog
+          item={renamingSource}
+          onCancel={() => setRenamingSource(null)}
+          onConfirm={handleConfirmRename}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function DeleteDialog({ item, onCancel, onConfirm }) {
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleConfirm() {
+    setDeleting(true);
+    await onConfirm();
+  }
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-pad">
+          <div className="dialog-icon di-danger">
+            <Icon name="trash" size={20} />
+          </div>
+          <div className="dialog-title">Delete "{item.title}"?</div>
+          <div className="dialog-copy">
+            This reference source and its generated style profile will be removed. This cannot be undone.
+          </div>
+        </div>
+        <div className="dialog-foot">
+          <Button variant="ghost" onClick={onCancel}>Keep source</Button>
+          <Button variant="danger" onClick={handleConfirm} disabled={deleting}>
+            {deleting ? "Deleting..." : "Delete source"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RenameDialog({ item, onCancel, onConfirm }) {
+  const [title, setTitle] = useState(item.title);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    await onConfirm(title.trim());
+  }
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <form onSubmit={handleSave}>
+          <div className="dialog-pad">
+            <div className="dialog-title">Rename reference source</div>
+            <div className="dialog-copy" style={{ marginBottom: 12 }}>
+              Update the name of this source in your collection.
+            </div>
+            <TextField
+              label="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="dialog-foot">
+            <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+            <Button type="submit" disabled={saving || !title.trim()}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

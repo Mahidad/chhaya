@@ -4,16 +4,9 @@ import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
-import { listStudyGuides } from "../../api/studyGuides";
+import { TextField } from "../../components/ui/Field";
+import { listStudyGuides, deleteStudyGuide, renameStudyGuide } from "../../api/studyGuides";
 
-/*
-  Simplified vs. lamia-f1-01-empty.html: the mockup's empty state has a
-  decorative "paper mock" illustration and a row of suggested-topic chips
-  pulled from the student's enrolled courses (a concept that doesn't exist
-  in the data model yet). Reused the same `.ingest-empty` block Reference
-  Sources uses instead of building a second bespoke empty-state look --
-  worth a real design pass once course enrollment is modeled.
-*/
 const STATUS_BADGE = {
   pending: { variant: undefined, label: "Pending" },
   generating: { variant: "amber", label: "Generating" },
@@ -23,11 +16,29 @@ const STATUS_BADGE = {
 
 export default function StudyGuidesListPage() {
   const [guides, setGuides] = useState(null);
+  const [deletingGuide, setDeletingGuide] = useState(null);
+  const [renamingGuide, setRenamingGuide] = useState(null);
   const navigate = useNavigate();
 
+  const refresh = () => listStudyGuides().then(setGuides).catch(() => setGuides([]));
+
   useEffect(() => {
-    listStudyGuides().then(setGuides).catch(() => setGuides([]));
+    refresh();
   }, []);
+
+  async function handleConfirmDelete() {
+    if (!deletingGuide) return;
+    await deleteStudyGuide(deletingGuide.id);
+    setDeletingGuide(null);
+    refresh();
+  }
+
+  async function handleConfirmRename(newTopic) {
+    if (!renamingGuide) return;
+    await renameStudyGuide(renamingGuide.id, newTopic);
+    setRenamingGuide(null);
+    refresh();
+  }
 
   if (guides === null) {
     return (
@@ -80,12 +91,36 @@ export default function StudyGuidesListPage() {
             const status = STATUS_BADGE[g.status] || STATUS_BADGE.pending;
             return (
               <Link key={g.id} to={`/guides/${g.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <div className="card card-pad">
+                <div className="card card-pad" style={{ height: "100%", display: "flex", flexDirection: "column", position: "relative" }}>
                   <div className="thumb"><Icon name="guides" size={26} /></div>
-                  <div className="src-title">{g.topic}</div>
-                  <div className="src-meta">
+                  <div className="src-title" style={{ marginTop: 12 }}>{g.topic}</div>
+                  <div className="src-meta" style={{ marginTop: 8 }}>
                     <Badge variant={status.variant}>{status.label}</Badge>
-                    <span>{g.depth}</span>
+                    <span style={{ textTransform: "capitalize" }}>{g.depth}</span>
+                  </div>
+                  <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--line-soft)" }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRenamingGuide(g);
+                      }}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeletingGuide(g);
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
               </Link>
@@ -93,6 +128,93 @@ export default function StudyGuidesListPage() {
           })}
         </div>
       )}
+
+      {deletingGuide && (
+        <DeleteDialog
+          item={deletingGuide}
+          onCancel={() => setDeletingGuide(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
+
+      {renamingGuide && (
+        <RenameDialog
+          item={renamingGuide}
+          onCancel={() => setRenamingGuide(null)}
+          onConfirm={handleConfirmRename}
+        />
+      )}
     </AppShell>
+  );
+}
+
+function DeleteDialog({ item, onCancel, onConfirm }) {
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleConfirm() {
+    setDeleting(true);
+    await onConfirm();
+  }
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-pad">
+          <div className="dialog-icon di-danger">
+            <Icon name="trash" size={20} />
+          </div>
+          <div className="dialog-title">Delete "{item.topic}"?</div>
+          <div className="dialog-copy">
+            This study guide will be permanently removed. This action cannot be undone.
+          </div>
+        </div>
+        <div className="dialog-foot">
+          <Button variant="ghost" onClick={onCancel}>Keep guide</Button>
+          <Button variant="danger" onClick={handleConfirm} disabled={deleting}>
+            {deleting ? "Deleting..." : "Delete guide"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RenameDialog({ item, onCancel, onConfirm }) {
+  const [topic, setTopic] = useState(item.topic);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!topic.trim()) return;
+    setSaving(true);
+    await onConfirm(topic.trim());
+  }
+
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <form onSubmit={handleSave}>
+          <div className="dialog-pad">
+            <div className="dialog-title">Rename study guide</div>
+            <div className="dialog-copy" style={{ marginBottom: 12 }}>
+              Update the topic of this guide in your collection.
+            </div>
+            <TextField
+              label="Topic"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="dialog-foot">
+            <Button variant="ghost" type="button" onClick={onCancel}>Cancel</Button>
+            <Button type="submit" disabled={saving || !topic.trim()}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

@@ -8,6 +8,12 @@ class ReferenceSourceCreate(BaseModel):
     title: str
     source_type: str  # "youtube_video" | "youtube_playlist" | "course_link"
     url: str
+    skip_short: bool = False
+
+
+class ReferenceSourceUpdate(BaseModel):
+    """Payload for renaming a reference source."""
+    title: str
 
 
 class VideoOut(BaseModel):

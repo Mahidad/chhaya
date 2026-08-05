@@ -20,3 +20,12 @@ export async function createStudyGuide({ topic, teacherProfileId, depth, include
   });
   return data;
 }
+
+export async function deleteStudyGuide(id) {
+  await client.delete(`/study-guides/${id}`);
+}
+
+export async function renameStudyGuide(id, topic) {
+  const { data } = await client.patch(`/study-guides/${id}`, { topic });
+  return data;
+}

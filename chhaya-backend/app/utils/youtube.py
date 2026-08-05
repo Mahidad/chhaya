@@ -36,7 +36,28 @@ def extract_video_id(url_or_id: str) -> str:
     raise ValueError(f"Could not extract a YouTube video id from: {url_or_id}")
 
 
-def fetch_transcript_text(video_id: str, languages: list[str] | None = None) -> str:
+def clean_transcript_text(raw_text: str) -> str:
+    """Strips timestamps, caption noise like [Music], and filler words."""
+    # Strip bracketed caption noise like [Music], [Applause], (Laughter)
+    text = re.sub(r"\[.*?\]|\(.*?\)", " ", raw_text)
+    # Strip timestamps like 0:00, 12:34, 1:23:45
+    text = re.sub(r"\b\d{1,2}:\d{2}(?::\d{2})?\b", " ", text)
+    # Strip common filler words and verbal ticks
+    fillers = [
+        r"\bumm+\b", r"\buhh+\b", r"\berr+\b", r"\bso basically\b",
+        r"\byou know\b", r"\bbasically\b", r"\bi mean\b", r"\bkind of\b"
+    ]
+    for pattern in fillers:
+        text = re.sub(pattern, " ", text, flags=re.IGNORECASE)
+    # Collapse multiple whitespace characters
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def fetch_transcript_text(
+    video_id: str,
+    languages: list[str] | None = None,
+    skip_short: bool = False,
+) -> str:
     """Returns the transcript as one clean string of plain text."""
     try:
         langs = languages or ["en"]
@@ -59,6 +80,15 @@ def fetch_transcript_text(video_id: str, languages: list[str] | None = None) -> 
         raise TranscriptUnavailableError(
             f"Could not fetch transcript for video {video_id}: {exc}"
         ) from exc
+
+    # Check total video duration if skip_short is set
+    total_duration = sum(getattr(snippet, "duration", 0) for snippet in fetched)
+    if skip_short and total_duration > 0 and total_duration < 180:
+        raise TranscriptUnavailableError(
+            f"Video {video_id} is shorter than 3 minutes ({int(total_duration)}s) and was skipped."
+        )
+
     # FetchedTranscript is iterable of FetchedTranscriptSnippet(text, start, duration)
-    return " ".join(snippet.text for snippet in fetched)
+    raw = " ".join(snippet.text for snippet in fetched)
+    return clean_transcript_text(raw)
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "../icons/Icon";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
 
 function initials(name) {
   if (!name) return "?";
@@ -10,7 +11,7 @@ function initials(name) {
 
 export default function Topbar({ section, current }) {
   const { user, logout } = useAuth();
-  const [lang, setLang] = useState("en");
+  const { lang, setLang, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -23,7 +24,7 @@ export default function Topbar({ section, current }) {
       <div className="topbar-right">
         <div className="searchbar">
           <Icon name="search" size={16} />
-          <span>Search topics, teachers</span>
+          <span>{t("searchPlaceholder")}</span>
         </div>
         <div className="lang-toggle">
           <button

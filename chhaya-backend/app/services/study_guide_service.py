@@ -11,7 +11,7 @@ from app.models.study_guide import StudyGuide, GuideStatus
 from app.repositories.study_guide_repository import study_guide_repository
 from app.repositories.teacher_profile_repository import teacher_profile_repository
 from app.schemas.study_guide import StudyGuideCreate
-from app.services.guide_generation_service import generate_guide_text, generate_formula_sheet
+from app.services.guide_generation_service import generate_guide_text, generate_formula_sheet, generate_bangla_translation
 from app.utils.exceptions import NotFoundError
 
 
@@ -52,8 +52,8 @@ def create_and_generate(
         if payload.include_formula_sheet:
             updates["formula_sheet_content"] = generate_formula_sheet(topic=payload.topic)
 
-        # include_bangla is stored but not acted on yet -- see the
-        # docstring in guide_generation_service.py for why.
+        if payload.include_bangla:
+            updates["bangla_content"] = generate_bangla_translation(text=content)
 
         guide = study_guide_repository.update(db, db_obj=guide, obj_in=updates)
     except Exception as exc:  # noqa: BLE001
@@ -79,3 +79,15 @@ def get_guide_for_user(
     if not guide:
         raise NotFoundError("Study guide not found.")
     return guide
+
+
+def delete_guide(db: psycopg.Connection, *, user_id: str, guide_id: str) -> None:
+    guide = get_guide_for_user(db, user_id=user_id, guide_id=guide_id)
+    study_guide_repository.delete(db, id=guide.id)
+
+
+def rename_guide(
+    db: psycopg.Connection, *, user_id: str, guide_id: str, topic: str
+) -> StudyGuide:
+    guide = get_guide_for_user(db, user_id=user_id, guide_id=guide_id)
+    return study_guide_repository.update(db, db_obj=guide, obj_in={"topic": topic})
