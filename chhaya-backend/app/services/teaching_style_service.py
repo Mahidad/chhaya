@@ -55,7 +55,7 @@ def _mock_style_profile(transcript_text: str) -> dict:
 
 
 def analyze_style(transcript_text: str) -> dict:
-    if not settings.GEMINI_API_KEY:
+    if not settings.GEMINI_API_KEY or not settings.GEMINI_API_KEY.startswith("AIzaSy"):
         return _mock_style_profile(transcript_text)
 
     try:
