@@ -1254,3 +1254,129 @@
   color: var(--ink);
 }
 
+/* Guide body — rendered markdown */
+.guide-body {
+  padding: 20px 24px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink);
+}
+.guide-body h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 28px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink);
+}
+.guide-body h2:first-child {
+  margin-top: 0;
+}
+.guide-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+  color: var(--ink);
+}
+.guide-body p {
+  margin: 0 0 14px;
+}
+.guide-body ul, .guide-body ol {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+.guide-body li {
+  margin-bottom: 6px;
+}
+.guide-body strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.guide-body code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  background: var(--canvas);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--line-soft);
+}
+.guide-body pre {
+  background: var(--canvas);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.guide-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Teaching Style Pick Rows */
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+}
+.pick-row:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+}
+.pick-row.on {
+  background: var(--primary-soft);
+  border: 2px solid var(--primary);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+.pick-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.pick-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.pick-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  transition: all 0.15s ease;
+  position: relative;
+}
+.radio-on {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.radio-on::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+

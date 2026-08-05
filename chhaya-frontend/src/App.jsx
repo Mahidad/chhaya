@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import LoginPage from "./pages/auth/LoginPage";
@@ -28,37 +29,39 @@ import SessionTracker from "./components/SessionTracker";
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        {/* SessionTracker lives OUTSIDE <Routes> so React Router doesn't break,
-            but INSIDE <AuthProvider> so it can read auth state.
-            It mounts once per login and never re-mounts on page navigation. */}
-        <SessionTracker />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+      <LanguageProvider>
+        <AuthProvider>
+          {/* SessionTracker lives OUTSIDE <Routes> so React Router doesn't break,
+              but INSIDE <AuthProvider> so it can read auth state.
+              It mounts once per login and never re-mounts on page navigation. */}
+          <SessionTracker />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-          <Route path="/" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
 
-          <Route path="/sources" element={<ProtectedRoute><ReferenceSourcesListPage /></ProtectedRoute>} />
-          <Route path="/sources/new" element={<ProtectedRoute><AddSourcePage /></ProtectedRoute>} />
-          <Route path="/sources/:id" element={<ProtectedRoute><SourceDetailPage /></ProtectedRoute>} />
+            <Route path="/sources" element={<ProtectedRoute><ReferenceSourcesListPage /></ProtectedRoute>} />
+            <Route path="/sources/new" element={<ProtectedRoute><AddSourcePage /></ProtectedRoute>} />
+            <Route path="/sources/:id" element={<ProtectedRoute><SourceDetailPage /></ProtectedRoute>} />
 
-          <Route path="/library" element={<ProtectedRoute><StyleLibraryPage /></ProtectedRoute>} />
+            <Route path="/library" element={<ProtectedRoute><StyleLibraryPage /></ProtectedRoute>} />
 
-          <Route path="/guides" element={<ProtectedRoute><StudyGuidesListPage /></ProtectedRoute>} />
-          <Route path="/guides/new" element={<ProtectedRoute><ConfigureGuidePage /></ProtectedRoute>} />
-          <Route path="/guides/:id" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
+            <Route path="/guides" element={<ProtectedRoute><StudyGuidesListPage /></ProtectedRoute>} />
+            <Route path="/guides/new" element={<ProtectedRoute><ConfigureGuidePage /></ProtectedRoute>} />
+            <Route path="/guides/:id" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
 
-          <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
-          <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />
-          <Route path="/exam-papers/:id" element={<ProtectedRoute><ExamPaperDetailPage /></ProtectedRoute>} />
+            <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
+            <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />
+            <Route path="/exam-papers/:id" element={<ProtectedRoute><ExamPaperDetailPage /></ProtectedRoute>} />
 
-          <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
+            <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

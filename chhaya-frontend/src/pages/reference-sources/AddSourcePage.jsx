@@ -23,6 +23,7 @@ export default function AddSourcePage() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [sourceType, setSourceType] = useState("youtube_video");
+  const [skipShort, setSkipShort] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,7 +32,7 @@ export default function AddSourcePage() {
     setError("");
     setSubmitting(true);
     try {
-      const source = await createReferenceSource({ title, sourceType, url });
+      const source = await createReferenceSource({ title, sourceType, url, skipShort });
       navigate(`/sources/${source.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || "Could not add that source. Double-check the link and try again.");
@@ -109,10 +110,10 @@ export default function AddSourcePage() {
                 right={<span className="badge">Always on</span>}
               />
               <Checkbox
-                checked={false}
-                onChange={() => {}}
+                checked={skipShort}
+                onChange={() => setSkipShort((v) => !v)}
                 label="Skip lectures shorter than 3 minutes"
-                sub="Coming soon — matters once playlists are supported."
+                sub="Skips videos with duration under 180 seconds."
               />
             </div>
           </div>

@@ -32,12 +32,36 @@ Teaching style:
 - Example density: {example_density}
 - Notes on how this teacher sequences ideas: {sequencing_notes}
 
-Respond with ONLY the guide's body text (no JSON, no markdown headers) --
-plain prose organized into clear sections a student can read top to bottom.
+Format the guide using Markdown:
+- Use ## for section headings and ### for sub-sections.
+- Use bullet points or numbered lists for key concepts.
+- Separate ideas into clear paragraphs with blank lines between them.
+- Use **bold** for important terms and definitions.
+- Include worked examples where appropriate for the depth level.
+- Do NOT use LaTeX math notation (no $, \\text, \\frac etc.).
+  Write formulas in plain text instead (e.g. "F = m * a").
+
+Respond with ONLY the guide content in Markdown. No JSON wrapping.
 """
 
 FORMULA_SHEET_PROMPT_TEMPLATE = """Extract a condensed formula sheet for the
-STEM topic "{topic}" -- key formulas only, one per line, no explanation."""
+STEM topic "{topic}".
+
+Rules:
+- Provide key formulas formatted in LaTeX math notation.
+- Enclose each equation in double dollar signs, e.g.
+  $$\\text{{Addr}}(A[i]) = B + i \\cdot S$$
+- One formula per line, with a short label before the equation.
+"""
+
+BANGLA_TRANSLATION_PROMPT = """Translate the following study guide chapter accurately into fluent, clear Bangla (Bengali).
+Keep all markdown formatting (headings, bullet points, bold terms) intact. Keep equations and formula expressions in standard math/LaTeX format.
+
+Content:
+\"\"\"
+{text}
+\"\"\"
+"""
 
 
 def _mock_guide(topic: str, depth: str) -> str:
@@ -51,11 +75,15 @@ def _mock_guide(topic: str, depth: str) -> str:
 
 
 def _mock_formula_sheet(topic: str) -> str:
-    return f"MOCK FORMULA SHEET (no GEMINI_API_KEY set) for {topic}."
+    return (
+        f"MOCK FORMULA SHEET for {topic}:\n\n"
+        f"$$\\text{{Addr}}(A[i]) = B + i \\cdot S$$\n\n"
+        f"$$\\text{{Addr}}_{{\\text{{row}}}}(A[i][j]) = B + (i \\cdot N + j) \\cdot S$$"
+    )
 
 
 def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
-    if not settings.GEMINI_API_KEY or not settings.GEMINI_API_KEY.startswith("AIzaSy"):
+    if not settings.GEMINI_API_KEY:
         return _mock_guide(topic, depth)
     try:
         import google.generativeai as genai
@@ -78,7 +106,7 @@ def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
 
 
 def generate_formula_sheet(*, topic: str) -> str:
-    if not settings.GEMINI_API_KEY or not settings.GEMINI_API_KEY.startswith("AIzaSy"):
+    if not settings.GEMINI_API_KEY:
         return _mock_formula_sheet(topic)
     try:
         import google.generativeai as genai
@@ -89,3 +117,17 @@ def generate_formula_sheet(*, topic: str) -> str:
         return response.text.strip()
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini formula sheet generation failed: {exc}") from exc
+
+
+def generate_bangla_translation(*, text: str) -> str:
+    if not settings.GEMINI_API_KEY:
+        return f"## বাংলা সংস্করণ (মক)\n\n{text}\n\n*(বাংলা অনুবাদ প্রস্তুত রয়েছে)*"
+    try:
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        response = model.generate_content(BANGLA_TRANSLATION_PROMPT.format(text=text[:10000]))
+        return response.text.strip()
+    except Exception as exc:  # noqa: BLE001
+        raise ExternalServiceError(f"Gemini Bangla translation failed: {exc}") from exc

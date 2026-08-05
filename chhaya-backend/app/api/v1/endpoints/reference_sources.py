@@ -5,7 +5,7 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.repositories.teacher_profile_repository import teacher_profile_repository
-from app.schemas.reference_source import ReferenceSourceCreate, ReferenceSourceOut
+from app.schemas.reference_source import ReferenceSourceCreate, ReferenceSourceOut, ReferenceSourceUpdate
 from app.schemas.teacher_profile import TeacherProfileOut
 from app.services import reference_source_service
 from app.utils.exceptions import NotFoundError
@@ -91,6 +91,21 @@ def delete_reference_source(
     try:
         reference_source_service.delete_source(
             db, user_id=current_user.id, source_id=source_id
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.patch("/{source_id}", response_model=ReferenceSourceOut)
+def rename_reference_source(
+    source_id: str,
+    payload: ReferenceSourceUpdate,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return reference_source_service.rename_source(
+            db, user_id=current_user.id, source_id=source_id, title=payload.title
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

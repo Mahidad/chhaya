@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.study_guide import StudyGuideCreate, StudyGuideOut
+from app.schemas.study_guide import StudyGuideCreate, StudyGuideOut, StudyGuideUpdate
 from app.services import study_guide_service
 from app.utils.exceptions import NotFoundError
 
@@ -42,6 +42,35 @@ def get_study_guide(
     try:
         return study_guide_service.get_guide_for_user(
             db, user_id=current_user.id, guide_id=guide_id
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.delete("/{guide_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_study_guide(
+    guide_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        study_guide_service.delete_guide(
+            db, user_id=current_user.id, guide_id=guide_id
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.patch("/{guide_id}", response_model=StudyGuideOut)
+def rename_study_guide(
+    guide_id: str,
+    payload: StudyGuideUpdate,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return study_guide_service.rename_guide(
+            db, user_id=current_user.id, guide_id=guide_id, topic=payload.topic
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

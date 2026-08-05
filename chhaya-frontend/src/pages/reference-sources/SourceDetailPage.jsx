@@ -5,7 +5,7 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
 import AnalysingPanel from "../../components/reference-sources/AnalysingPanel";
-import { getReferenceSource, getSourceProfile } from "../../api/referenceSources";
+import { getReferenceSource, getSourceProfile, deleteReferenceSource, renameReferenceSource } from "../../api/referenceSources";
 
 // Categorical backend values -> an approximate meter fill. The backend
 // reports levels ("slow"/"moderate"/"fast"), not the mockup's fabricated
@@ -24,6 +24,21 @@ export default function SourceDetailPage() {
   const [source, setSource] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState(false);
+
+  async function handleDelete() {
+    if (window.confirm("Are you sure you want to remove this reference source?")) {
+      await deleteReferenceSource(id);
+      navigate("/sources");
+    }
+  }
+
+  async function handleRename() {
+    const newTitle = window.prompt("Enter new title for reference source:", source?.title);
+    if (newTitle && newTitle.trim() !== "") {
+      const updated = await renameReferenceSource(id, newTitle.trim());
+      setSource(updated);
+    }
+  }
 
   const load = useCallback(async () => {
     const data = await getReferenceSource(id);
@@ -120,6 +135,8 @@ export default function SourceDetailPage() {
           <div className="page-sub">{source.videos[0]?.title || source.title}</div>
         </div>
         <div className="page-actions">
+          <Button variant="ghost" onClick={handleRename}>Rename</Button>
+          <Button variant="danger" onClick={handleDelete}>Delete</Button>
           <Button variant="primary" icon={<Icon name="check" size={16} strokeWidth="2.4" />} onClick={() => navigate("/library")}>
             Save to style library
           </Button>

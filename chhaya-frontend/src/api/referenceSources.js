@@ -17,17 +17,23 @@ export async function getReferenceSource(id) {
   return data;
 }
 
-export async function createReferenceSource({ title, sourceType, url }) {
+export async function createReferenceSource({ title, sourceType, url, skipShort = false }) {
   const { data } = await client.post("/reference-sources", {
     title,
     source_type: sourceType,
     url,
+    skip_short: skipShort,
   });
   return data;
 }
 
 export async function deleteReferenceSource(id) {
   await client.delete(`/reference-sources/${id}`);
+}
+
+export async function renameReferenceSource(id, title) {
+  const { data } = await client.patch(`/reference-sources/${id}`, { title });
+  return data;
 }
 
 export async function getSourceProfile(id) {
