@@ -55,7 +55,7 @@ def _mock_formula_sheet(topic: str) -> str:
 
 
 def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
-    if not settings.GEMINI_API_KEY:
+    if not settings.GEMINI_API_KEY or not settings.GEMINI_API_KEY.startswith("AIzaSy"):
         return _mock_guide(topic, depth)
     try:
         import google.generativeai as genai
@@ -78,7 +78,7 @@ def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
 
 
 def generate_formula_sheet(*, topic: str) -> str:
-    if not settings.GEMINI_API_KEY:
+    if not settings.GEMINI_API_KEY or not settings.GEMINI_API_KEY.startswith("AIzaSy"):
         return _mock_formula_sheet(topic)
     try:
         import google.generativeai as genai

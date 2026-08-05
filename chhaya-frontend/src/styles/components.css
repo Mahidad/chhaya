@@ -1238,3 +1238,19 @@
   margin-top: 8px;
   line-height: 1.4;
 }
+
+/* Guide Summary Styles */
+.sum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.sum-v {
+  font-weight: 600;
+  color: var(--ink);
+}
+

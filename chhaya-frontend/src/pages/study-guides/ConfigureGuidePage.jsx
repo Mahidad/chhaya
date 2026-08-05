@@ -122,12 +122,34 @@ export default function ConfigureGuidePage() {
 
             <div>
               <div className="label" style={{ marginBottom: 8 }}>3. Depth and language</div>
-              <div className="opt-grid" style={{ marginBottom: 12 }}>
+              <div className="depth-buttons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                 {DEPTH_OPTIONS.map((opt) => (
-                  <div key={opt.value} className={`opt-card ${depth === opt.value ? "on" : ""}`} onClick={() => setDepth(opt.value)}>
-                    <div className="opt-t">{opt.title}</div>
-                    <div className="opt-s">{opt.sub}</div>
-                  </div>
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDepth(opt.value)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      padding: '16px',
+                      borderRadius: '10px',
+                      border: '2px solid ' + (depth === opt.value ? 'var(--primary)' : 'var(--line)'),
+                      background: depth === opt.value ? 'var(--primary-soft)' : 'var(--surface)',
+                      color: 'var(--ink)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: depth === opt.value ? '0 4px 12px rgba(0, 0, 0, 0.05)' : 'none',
+                    }}
+                  >
+                    <div style={{ fontWeight: '700', fontSize: '14px', color: depth === opt.value ? 'var(--primary-dark)' : 'var(--ink)', marginBottom: '4px' }}>
+                      {opt.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: '1.4' }}>
+                      {opt.sub}
+                    </div>
+                  </button>
                 ))}
               </div>
               <Checkbox
@@ -151,11 +173,29 @@ export default function ConfigureGuidePage() {
             <span className="card-title">Guide summary</span>
             <span className="card-note">Before you generate</span>
           </div>
-          <div className="sum-row"><span>Topic</span><span className="sum-v">{topic || "—"}</span></div>
-          <div className="sum-row"><span>Style</span><span className="sum-v">{selectedProfile?.display_name || "—"}</span></div>
-          <div className="sum-row"><span>Depth</span><span className="sum-v">{depth}</span></div>
-          <div className="sum-row"><span>Formula sheet</span><span className="sum-v">{includeFormulaSheet ? "Yes" : "No"}</span></div>
-          <div className="sum-row"><span>Bangla</span><span className="sum-v">{includeBangla ? "Recorded" : "No"}</span></div>
+          <div className="sum-row">
+            <span>Topic</span>
+            <span className="sum-v" style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {topic || "—"}
+            </span>
+          </div>
+          <div className="sum-row">
+            <span>Style</span>
+            <span className="sum-v">{selectedProfile?.display_name || "—"}</span>
+          </div>
+          <div className="sum-row">
+            <span>Depth</span>
+            <span className="sum-v" style={{ textTransform: 'capitalize' }}>{depth}</span>
+          </div>
+          <div className="sum-row">
+            <span>Formula sheet</span>
+            <span className="sum-v">{includeFormulaSheet ? "Yes" : "No"}</span>
+          </div>
+          <div className="sum-row">
+            <span>Bangla version</span>
+            <span className="sum-v">{includeBangla ? "Yes" : "No"}</span>
+          </div>
+
           <div className="sum-foot">
             <Button type="submit" disabled={submitting || !topic || !profileId} style={{ width: "100%", justifyContent: "center" }} icon={<Icon name="fileText" size={16} />}>
               {submitting ? "Generating..." : "Generate study guide"}

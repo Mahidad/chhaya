@@ -38,13 +38,23 @@ def extract_video_id(url_or_id: str) -> str:
 
 def fetch_transcript_text(video_id: str, languages: list[str] | None = None) -> str:
     """Returns the transcript as one clean string of plain text."""
-    languages = languages or ["en"]
     try:
-        fetched = YouTubeTranscriptApi().fetch(video_id, languages=languages)
+        langs = languages or ["en"]
+        fetched = YouTubeTranscriptApi().fetch(video_id, languages=langs)
     except (TranscriptsDisabled, NoTranscriptFound) as exc:
-        raise TranscriptUnavailableError(
-            f"No transcript available for video {video_id}"
-        ) from exc
+        if languages:
+            raise TranscriptUnavailableError(
+                f"No transcript available for video {video_id} in languages {languages}"
+            ) from exc
+        # Try to fallback to any available transcript (e.g. auto-generated or other language)
+        try:
+            transcript_list = YouTubeTranscriptApi().list(video_id)
+            first_transcript = next(iter(transcript_list))
+            fetched = first_transcript.fetch()
+        except Exception as fallback_exc:
+            raise TranscriptUnavailableError(
+                f"No transcript available for video {video_id}"
+            ) from fallback_exc
     except Exception as exc:  # noqa: BLE001 - network/IP-block/etc. from the library
         raise TranscriptUnavailableError(
             f"Could not fetch transcript for video {video_id}: {exc}"
