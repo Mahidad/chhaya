@@ -36,6 +36,16 @@ export default function AnalyticsDashboardPage() {
   const [error, setError] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [activeSessionMinutes, setActiveSessionMinutes] = useState(0);
+
+  function refreshActiveSessionMinutes() {
+    const startedAt = Number(sessionStorage.getItem("chhaya_session_start_ms"));
+    setActiveSessionMinutes(
+      Number.isFinite(startedAt) && startedAt > 0
+        ? Math.floor((Date.now() - startedAt) / 60_000)
+        : 0
+    );
+  }
 
   async function loadData() {
     setLoading(true);
@@ -54,7 +64,29 @@ export default function AnalyticsDashboardPage() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    refreshActiveSessionMinutes();
+
+    // An active session's duration grows while this page is open, so keep
+    // the summary and charts current without requiring a page reload.
+    const refreshTimer = window.setInterval(() => {
+      loadData();
+      refreshActiveSessionMinutes();
+    }, 30_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") loadData();
+      if (document.visibilityState === "visible") refreshActiveSessionMinutes();
+    };
+    window.addEventListener("chhaya-session-started", refreshActiveSessionMinutes);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(refreshTimer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("chhaya-session-started", refreshActiveSessionMinutes);
+    };
+  }, []);
 
   async function handleSeed() {
     setSeeding(true);
@@ -89,7 +121,8 @@ export default function AnalyticsDashboardPage() {
   }
 
   const hasAnyData = chartData?.some((d) => d.session_count > 0 || d.guide_views > 0 || d.study_minutes > 0);
-  const tw = summary?.this_week ?? { sessions: 0, guide_views: 0, study_minutes: 0 };
+  const totals = summary?.this_week ?? { sessions: 0, guide_views: 0, study_minutes: 0 };
+  const tw = { ...totals, study_minutes: totals.study_minutes + activeSessionMinutes };
 
   return (
     <AppShell section="Overview" current="Analytics">

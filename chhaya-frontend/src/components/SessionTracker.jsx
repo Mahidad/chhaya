@@ -34,6 +34,7 @@
 
 import { useEffect, useRef } from "react";
 import { startStudySession } from "../api/progress";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -42,10 +43,15 @@ const SESSION_KEY = "chhaya_active_session_id";
 const SESSION_START_KEY = "chhaya_session_start_ms";
 
 export default function SessionTracker() {
+  const { user } = useAuth();
   const sessionIdRef = useRef(null);
   const startTimeRef = useRef(null);
 
   useEffect(() => {
+    // Do not create a session until authentication is complete. This also
+    // starts tracking immediately after an in-app login, without a reload.
+    if (!user) return undefined;
+
     // ── Guard: skip if a session is already tracked in this tab ───────────
     // This prevents React StrictMode's double-mount from creating two rows.
     const existingId = sessionStorage.getItem(SESSION_KEY);
@@ -66,6 +72,7 @@ export default function SessionTracker() {
         // Persist to sessionStorage so StrictMode's second mount finds it
         sessionStorage.setItem(SESSION_KEY, session.id);
         sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
+        window.dispatchEvent(new Event("chhaya-session-started"));
       })
       .catch(() => {
         // Never let a tracking failure break the UI
@@ -106,7 +113,7 @@ export default function SessionTracker() {
       // On logout (component unmounts before tab closes), end the session
       handleUnload();
     };
-  }, []);
+  }, [user]);
 
   return null;
 }
