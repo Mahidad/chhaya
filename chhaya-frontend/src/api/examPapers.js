@@ -11,9 +11,7 @@ export async function getExamPaper(id) {
 }
 
 export async function uploadExamPaper({ title, course, file }) {
-  // multipart/form-data, not JSON -- has to match the backend's Form(...)/File(...)
-  // fields exactly. See the comment in app/api/v1/endpoints/exam_papers.py for why
-  // this endpoint can't just take a Pydantic body like the others.
+
   const formData = new FormData();
   formData.append("title", title);
   if (course) formData.append("course", course);
@@ -31,9 +29,9 @@ export async function deleteExamPaper(id) {
 
 export async function getExamPaperFileBlob(id) {
   const response = await client.get(`/exam-papers/${id}/file`, {
-    responseType: "blob",
+    responseType: "blob",     // binary large object
   });
-  return response.data;
+  return response.data;    // pdf data will be in the form of blob
 }
 
 

@@ -1,18 +1,5 @@
-"""
-Thin wrapper around `pytesseract`, following the exact wrapping pattern
-used in utils/youtube.py -- one function other code calls, so the actual
-OCR library can be swapped (e.g. to EasyOCR) by editing only this file.
 
-WHY A MOCK FALLBACK: `pytesseract` needs the system `tesseract-ocr` binary
-installed separately from anything `pip install` can provide (it's not a
-Python package, it's a C++ program pytesseract calls out to). Not every
-teammate will have that installed while building other parts of the app.
-Same trick as Gemini and the mock style profile: if tesseract genuinely
-isn't available, return clearly-labeled placeholder text instead of
-crashing every exam-paper upload for anyone who hasn't installed it yet.
-"""
-
-import shutil
+import shutil #built-in Python module. provides utilities for working with files and the operating system.
 
 
 class OCRUnavailableError(Exception):
@@ -33,17 +20,17 @@ def extract_text_from_file(file_path: str) -> str:
         )
 
     try:
-        import pytesseract
+        import pytesseract   # Python wrapper. communicates with the tesseract installed on computer
         from PIL import Image
 
         if file_path.lower().endswith(".pdf"):
-            from pdf2image import convert_from_path
+            from pdf2image import convert_from_path  # OCR cannot directly read PDFs.
 
             images = convert_from_path(file_path)
             extracted_pages = [pytesseract.image_to_string(img).strip() for img in images]
-            return "\n\n--- Page Break ---\n\n".join(filter(None, extracted_pages)).strip()
+            return "\n\n--- Page Break ---\n\n".join(filter(None, extracted_pages)).strip()  # filter(None, ) --> removes empty string
 
-        return pytesseract.image_to_string(Image.open(file_path)).strip()
+        return pytesseract.image_to_string(Image.open(file_path)).strip()   # jodi pdf na hoy tahole direct convert korbe
     except Exception as exc:  # noqa: BLE001
         raise OCRUnavailableError(f"OCR failed for {file_path}: {exc}") from exc
 

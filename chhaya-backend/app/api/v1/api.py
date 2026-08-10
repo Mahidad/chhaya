@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     teacher_profiles,
     study_guides,
     exam_papers,
+    likely_questions,
     progress,
 )
 
@@ -20,4 +21,5 @@ api_router.include_router(reference_sources.router)
 api_router.include_router(teacher_profiles.router)
 api_router.include_router(study_guides.router)
 api_router.include_router(exam_papers.router)
+api_router.include_router(likely_questions.router)
 api_router.include_router(progress.router)

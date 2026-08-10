@@ -12,7 +12,7 @@ class ExamPaperRepository(BaseRepository[ExamPaper]):
     def list_for_user(
         self, db: psycopg.Connection, *, user_id: str
     ) -> list[ExamPaper]:
-        with db.cursor(row_factory=dict_row) as cur:
+        with db.cursor(row_factory=dict_row) as cur:  #A cursor is like a tool used to send SQL commands.
             cur.execute(
                 "SELECT * FROM exam_papers WHERE user_id = %s ORDER BY created_at DESC",
                 (user_id,),

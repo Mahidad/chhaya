@@ -14,9 +14,9 @@ export default function ExamPaperDetailPage() {
   const [activeTab, setActiveTab] = useState("split"); // 'split', 'text', 'file'
 
   useEffect(() => {
-    let cancelled = false;
-    let timer;
-    async function tick() {
+    let cancelled = false;  // control variable
+    let timer;              // control variable
+    async function tick() {         // performs one API request.
       const data = await getExamPaper(id);
       if (cancelled) return;
       setPaper(data);

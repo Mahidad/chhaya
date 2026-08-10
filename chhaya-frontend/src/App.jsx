@@ -15,6 +15,9 @@ import GuideDetailPage from "./pages/study-guides/GuideDetailPage";
 import ExamPapersListPage from "./pages/exam-papers/ExamPapersListPage";
 import UploadExamPaperPage from "./pages/exam-papers/UploadExamPaperPage";
 import ExamPaperDetailPage from "./pages/exam-papers/ExamPaperDetailPage";
+import LikelyQuestionsListPage from "./pages/likely-questions/LikelyQuestionsListPage";
+import CreateLikelyQuestionsPage from "./pages/likely-questions/CreateLikelyQuestionsPage";
+import LikelyQuestionsDetailPage from "./pages/likely-questions/LikelyQuestionsDetailPage";
 import AnalyticsDashboardPage from "./pages/progress/AnalyticsDashboardPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
@@ -54,6 +57,9 @@ export default function App() {
             <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
             <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />
             <Route path="/exam-papers/:id" element={<ProtectedRoute><ExamPaperDetailPage /></ProtectedRoute>} />
+            <Route path="/likely-questions" element={<ProtectedRoute><LikelyQuestionsListPage /></ProtectedRoute>} />
+            <Route path="/likely-questions/new" element={<ProtectedRoute><CreateLikelyQuestionsPage /></ProtectedRoute>} />
+            <Route path="/likely-questions/:id" element={<ProtectedRoute><LikelyQuestionsDetailPage /></ProtectedRoute>} />
 
             <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />

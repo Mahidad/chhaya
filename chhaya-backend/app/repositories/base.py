@@ -54,7 +54,7 @@ class BaseRepository(Generic[ModelType]):
         pass through unchanged.
         """
         return {
-            k: Jsonb(v) if isinstance(v, dict) else v
+            k: Jsonb(v) if isinstance(v, (dict, list)) else v
             for k, v in data.items()
         }
 

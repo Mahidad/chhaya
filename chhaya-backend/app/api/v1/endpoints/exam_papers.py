@@ -11,21 +11,15 @@ from app.utils.exceptions import NotFoundError
 router = APIRouter(prefix="/exam-papers", tags=["exam-papers"])
 
 
-@router.post("", response_model=ExamPaperOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExamPaperOut, status_code=status.HTTP_201_CREATED) # return korbe ExamPaperOut schema model er ekta object ebong 201 status code
 async def upload_exam_paper(
-    title: str = Form(...),
-    course: str | None = Form(None),
-    file: UploadFile = File(...),
-    db: psycopg.Connection = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    title: str = Form(...),       # required field
+    course: str | None = Form(None),      # optional field
+    file: UploadFile = File(...),     
+    db: psycopg.Connection = Depends(get_db),   # database connection
+    current_user: User = Depends(get_current_user),   # current user
 ):
-    """
-    File uploads use `multipart/form-data`, not JSON -- that's why this
-    endpoint takes `Form(...)` fields instead of a Pydantic body schema
-    like every other POST endpoint in this app. FastAPI can't mix a JSON
-    body and a file in the same request, so text fields that travel
-    alongside a file become form fields too.
-    """
+
     file_bytes = await file.read()
     return exam_paper_service.create_and_process(
         db,
@@ -48,7 +42,7 @@ def list_exam_papers(
 @router.get("/{paper_id}", response_model=ExamPaperOut)
 def get_exam_paper(
     paper_id: str,
-    db: psycopg.Connection = Depends(get_db),
+    db: psycopg.Connection = Depends(get_db),  #Before calling this function, create a database connection // equivalent to db = get_db() when the function runs
     current_user: User = Depends(get_current_user),
 ):
     try:

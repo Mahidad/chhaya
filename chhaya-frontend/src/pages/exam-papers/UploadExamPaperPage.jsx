@@ -15,7 +15,7 @@ export default function UploadExamPaperPage() {
   const [error, setError] = useState("");
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e.preventDefault();    // page refresh hoy na
     if (!file) {
       setError("Choose an image or PDF file to upload.");
       return;
@@ -51,7 +51,7 @@ export default function UploadExamPaperPage() {
               <input
                 type="file"
                 accept="image/*,.pdf,application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => setFile(e.target.files?.[0] || null)}  // react receives --> [name:"midterm.pdf", size:..., type:"application/pdf"]
                 style={{ marginBottom: 8 }}
               />
               <div className="hint">JPG, PNG, or PDF files.</div>

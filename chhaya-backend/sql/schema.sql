@@ -1,21 +1,8 @@
--- =============================================================================
--- Chhaya – PostgreSQL schema (Module 1)
--- Run against a fresh database:
---   psql -U <user> -d chhaya -f sql/schema.sql
---
--- Module 1 Feature 4 (Amiyo): study_sessions + study_guide_views
---   added 2026-08-05. quiz_results removed (was wrong feature).
---
--- Safe to re-run: every statement uses IF NOT EXISTS / IF EXISTS.
--- gen_random_uuid() requires the pgcrypto extension (bundled with every
--- standard Postgres install since v8.3).
--- =============================================================================
+
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- ---------------------------------------------------------------------------
--- users
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS users (
     id               TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     full_name        TEXT        NOT NULL,
@@ -26,10 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
--- ---------------------------------------------------------------------------
--- reference_sources
--- One row = one YouTube video / playlist / course link a student adds.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reference_sources (
     id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id       TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -43,10 +26,7 @@ CREATE TABLE IF NOT EXISTS reference_sources (
 
 CREATE INDEX IF NOT EXISTS idx_reference_sources_user_id ON reference_sources (user_id);
 
--- ---------------------------------------------------------------------------
--- videos
--- One row per video that belongs to a reference source.
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS videos (
     id                TEXT    PRIMARY KEY DEFAULT gen_random_uuid()::text,
     source_id         TEXT    NOT NULL REFERENCES reference_sources (id) ON DELETE CASCADE,
@@ -60,11 +40,7 @@ CREATE TABLE IF NOT EXISTS videos (
 
 CREATE INDEX IF NOT EXISTS idx_videos_source_id ON videos (source_id);
 
--- ---------------------------------------------------------------------------
--- teacher_profiles
--- The structured teaching-style fingerprint Gemini derives from transcripts.
--- One source → at most one profile (UNIQUE on source_id).
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS teacher_profiles (
     id                TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id           TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -81,10 +57,7 @@ CREATE TABLE IF NOT EXISTS teacher_profiles (
 
 CREATE INDEX IF NOT EXISTS idx_teacher_profiles_user_id ON teacher_profiles (user_id);
 
--- ---------------------------------------------------------------------------
--- study_guides
--- AI-generated study guide, scoped to a teacher profile's style.
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS study_guides (
     id                    TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id               TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -103,10 +76,7 @@ CREATE TABLE IF NOT EXISTS study_guides (
 
 CREATE INDEX IF NOT EXISTS idx_study_guides_user_id ON study_guides (user_id);
 
--- ---------------------------------------------------------------------------
--- exam_papers
--- Scanned past-paper uploads; extracted_text is populated by OCR.
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS exam_papers (
     id             TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id        TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -121,12 +91,23 @@ CREATE TABLE IF NOT EXISTS exam_papers (
 
 CREATE INDEX IF NOT EXISTS idx_exam_papers_user_id ON exam_papers (user_id);
 
--- ---------------------------------------------------------------------------
--- study_sessions  (Module 1 Feature 4 – Amiyo)
--- One row per learning session a student opens.
--- started_at is set on INSERT; ended_at + duration_secs are set when the
--- student closes the session via PUT /progress/study-sessions/{id}/end.
--- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS likely_questions (
+    id                 TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id            TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    title              TEXT        NOT NULL,
+    course             TEXT,
+    status             TEXT        NOT NULL DEFAULT 'pending',
+    error_message      TEXT,
+    source_paper_count INTEGER     NOT NULL,
+    source_paper_ids   JSONB       NOT NULL DEFAULT '{"ids": []}'::jsonb,
+    analysis           JSONB,
+    predicted_questions JSONB,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_likely_questions_user_id ON likely_questions (user_id);
+
+
 CREATE TABLE IF NOT EXISTS study_sessions (
     id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id       TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -141,12 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_study_sessions_started_at ON study_sessions (star
 -- Add is_seed to existing tables that were created before this column existed
 ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE;
 
--- ---------------------------------------------------------------------------
--- study_guide_views  (Module 1 Feature 4 – Amiyo)
--- One row each time a student opens a completed guide's detail page.
--- Recorded silently (fire-and-forget) by GuideDetailPage.jsx via
--- POST /progress/study-guide-views.
--- ---------------------------------------------------------------------------
+
 CREATE TABLE IF NOT EXISTS study_guide_views (
     id              TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id         TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,

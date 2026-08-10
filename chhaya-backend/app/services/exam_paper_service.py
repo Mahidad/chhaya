@@ -1,17 +1,5 @@
-"""
-Orchestration for Omar's Feature 1: save an uploaded scan, run OCR, store
-the extracted text. Same create-then-process-then-update-status shape as
-Feature 1 and Lamia's guide generation -- three different domains, same
-skeleton, on purpose.
 
-CURRENT LIMITATION: only image files (jpg/png) are OCR'd directly.
-Scanned PDFs need to be converted to images first (the `pdf2image`
-package + the system `poppler` binary) before `extract_text_from_image`
-can read them -- not wired up yet. Worth doing before this feature is
-demoed with real past-paper PDFs, since that's the realistic input format.
-"""
-
-import os
+import os         #lets Python interact with the operating system.
 import uuid
 
 import psycopg
@@ -44,7 +32,7 @@ def create_and_process(
     course: str | None,
     file_bytes: bytes,
     filename: str,
-) -> ExamPaper:
+) -> ExamPaper:      # return kore ExamPaper object
     file_path = _save_upload(file_bytes, filename)
 
     paper = exam_paper_repository.create(
@@ -85,7 +73,7 @@ def list_papers_for_user(
 
 
 def get_paper_for_user(
-    db: psycopg.Connection, *, user_id: str, paper_id: str
+    db: psycopg.Connection, *, user_id: str, paper_id: str  #The * means everything after it must be passed as keyword arguments.
 ) -> ExamPaper:
     paper = exam_paper_repository.get_for_user(
         db, paper_id=paper_id, user_id=user_id
