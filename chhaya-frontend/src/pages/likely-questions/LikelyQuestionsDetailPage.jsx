@@ -3,15 +3,167 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import Icon from "../../components/icons/Icon";
-import { deleteLikelyQuestionSet, getLikelyQuestionSet } from "../../api/likelyQuestions";
+import {
+  deleteLikelyQuestionSet,
+  getLikelyQuestionSet,
+} from "../../api/likelyQuestions";
 
 export default function LikelyQuestionsDetailPage() {
-  const { id } = useParams(); const navigate = useNavigate(); const [set, setSet] = useState(null);
-  useEffect(() => { let cancelled = false; let timer; async function load() { const data = await getLikelyQuestionSet(id); if (cancelled) return; setSet(data); if (["pending", "analyzing"].includes(data.status)) timer = setTimeout(load, 2000); } load(); return () => { cancelled = true; clearTimeout(timer); }; }, [id]);
-  async function remove() { if (!window.confirm("Delete this likely-question set?")) return; await deleteLikelyQuestionSet(id); navigate("/likely-questions"); }
-  if (!set) return <AppShell section="Likely questions" current="Loading"><div>Loading...</div></AppShell>;
-  if (["pending", "analyzing"].includes(set.status)) return <AppShell section="Likely questions" current="Analysing"><div className="page-title">Analysing past-paper patterns</div><div className="page-sub">Gemini is preparing practice predictions.</div><div className="card card-pad"><div className="progress"><div className="progress-fill" style={{ width: "50%", animation: "chhaya-indeterminate 1.4s ease-in-out infinite" }} /></div></div></AppShell>;
-  if (set.status === "failed") return <AppShell section="Likely questions" current="Failed"><div className="banner banner-danger"><Icon name="alertTriangle" size={20} /><div><div className="banner-title">Generation failed</div><div className="banner-copy">{set.error_message}</div></div></div></AppShell>;
-  const analysis = set.analysis || {}; const questions = set.predicted_questions || [];
-  return <AppShell section="Likely questions" current={set.title}><div className="page-head"><div><div className="page-title">{set.title}</div><div className="page-sub">Based on {set.source_paper_count} past paper{set.source_paper_count === 1 ? "" : "s"}. These are practice predictions, not guarantees.</div></div><div className="page-actions"><Button variant="danger" onClick={remove} icon={<Icon name="trash" size={16} />}>Delete</Button><Button variant="ghost" onClick={() => navigate("/likely-questions")}>Back</Button></div></div>{analysis._mock && <div className="banner"><div><div className="banner-title">Mock analysis</div><div className="banner-copy">Set `GEMINI_API_KEY` to generate real analysis and predictions.</div></div></div>}<div className="split"><div className="col-side card"><div className="card-head"><span className="card-title">Observed exam pattern</span></div><div className="guide-body"><strong>Question types</strong><ul>{(analysis.question_types || []).map((item) => <li key={item}>{item}</li>)}</ul><strong>Point distribution</strong><p>{analysis.point_distribution}</p><strong>Section breakdown</strong><ul>{(analysis.section_breakdown || []).map((item) => <li key={item}>{item}</li>)}</ul><strong>Phrasing style</strong><p>{analysis.phrasing_style}</p><strong>Coverage notes</strong><p>{analysis.coverage_notes}</p></div></div><div className="col-form card"><div className="card-head"><span className="card-title">Likely practice questions</span></div><div className="guide-body">{questions.map((item, index) => <div key={`${item.question}-${index}`} style={{ paddingBottom: 16, marginBottom: 16, borderBottom: "1px solid var(--line-soft)" }}><div style={{ fontWeight: 700 }}>Q{index + 1}. {item.question}</div><div className="hint" style={{ marginTop: 6 }}>{item.question_type} · estimated {item.estimated_marks} marks</div><div style={{ marginTop: 8 }}>{item.rationale}</div></div>)}</div></div></div></AppShell>;
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [set, setSet] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer;
+
+    async function load() {
+      const data = await getLikelyQuestionSet(id);
+      if (cancelled) return;
+      setSet(data);
+      if (["pending", "analyzing"].includes(data.status)) {
+        timer = setTimeout(load, 2000);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [id]);
+
+  async function remove() {
+    if (!window.confirm("Delete this likely-question set?")) return;
+    await deleteLikelyQuestionSet(id);
+    navigate("/likely-questions");
+  }
+
+  if (!set) {
+    return (
+      <AppShell section="Likely questions" current="Loading">
+        <div>Loading...</div>
+      </AppShell>
+    );
+  }
+
+  if (["pending", "analyzing"].includes(set.status)) {
+    return (
+      <AppShell section="Likely questions" current="Analysing">
+        <div className="page-title">Analysing past-paper patterns</div>
+        <div className="page-sub">Gemini is preparing practice predictions.</div>
+        <div className="card card-pad">
+          <div className="progress">
+            <div
+              className="progress-fill"
+              style={{
+                width: "50%",
+                animation: "chhaya-indeterminate 1.4s ease-in-out infinite",
+              }}
+            />
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (set.status === "failed") {
+    return (
+      <AppShell section="Likely questions" current="Failed">
+        <div className="banner banner-danger">
+          <Icon name="alertTriangle" size={20} />
+          <div>
+            <div className="banner-title">Generation failed</div>
+            <div className="banner-copy">{set.error_message}</div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const analysis = set.analysis || {};
+  const questions = set.predicted_questions || [];
+
+  return (
+    <AppShell section="Likely questions" current={set.title}>
+      <div className="page-head">
+        <div>
+          <div className="page-title">{set.title}</div>
+          <div className="page-sub">
+            Based on {set.source_paper_count} past paper
+            {set.source_paper_count === 1 ? "" : "s"}. These are practice
+            predictions, not guarantees.
+          </div>
+        </div>
+        <div className="page-actions">
+          <Button variant="danger" onClick={remove} icon={<Icon name="trash" size={16} />}>
+            Delete
+          </Button>
+          <Button variant="ghost" onClick={() => navigate("/likely-questions")}>
+            Back
+          </Button>
+        </div>
+      </div>
+
+      {analysis._mock && (
+        <div className="banner">
+          <div>
+            <div className="banner-title">Mock analysis</div>
+            <div className="banner-copy">
+              Set `GEMINI_API_KEY` to generate real analysis and predictions.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="split">
+        <div className="col-side card">
+          <div className="card-head">
+            <span className="card-title">Observed exam pattern</span>
+          </div>
+          <div className="guide-body">
+            <strong>Question types</strong>
+            <ul>
+              {(analysis.question_types || []).map((item) => <li key={item}>{item}</li>)}
+            </ul>
+            <strong>Point distribution</strong>
+            <p>{analysis.point_distribution}</p>
+            <strong>Section breakdown</strong>
+            <ul>
+              {(analysis.section_breakdown || []).map((item) => <li key={item}>{item}</li>)}
+            </ul>
+            <strong>Phrasing style</strong>
+            <p>{analysis.phrasing_style}</p>
+            <strong>Coverage notes</strong>
+            <p>{analysis.coverage_notes}</p>
+          </div>
+        </div>
+        <div className="col-form card">
+          <div className="card-head">
+            <span className="card-title">Likely practice questions</span>
+          </div>
+          <div className="guide-body">
+            {questions.map((item, index) => (
+              <div
+                key={`${item.question}-${index}`}
+                style={{
+                  paddingBottom: 16,
+                  marginBottom: 16,
+                  borderBottom: "1px solid var(--line-soft)",
+                }}
+              >
+                <div style={{ fontWeight: 700 }}>
+                  Q{index + 1}. {item.question}
+                </div>
+                <div className="hint" style={{ marginTop: 6 }}>
+                  {item.question_type} · estimated {item.estimated_marks} marks
+                </div>
+                <div style={{ marginTop: 8 }}>{item.rationale}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
 }
