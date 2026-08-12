@@ -15,10 +15,17 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {      //"You are not logged in."
-      localStorage.removeItem("chhaya_token");
-      localStorage.removeItem("chhaya_user");
-      window.location.href = "/login";
+    if (error.response?.status === 401) {
+      // Don't auto-redirect for login/signup requests -- let the page
+      // show the real error ("wrong password") instead of silently
+      // clearing the token and bouncing to /login in a loop.
+      const url = error.config?.url || "";
+      const isAuthRoute = url.includes("/auth/login") || url.includes("/auth/signup");
+      if (!isAuthRoute) {
+        localStorage.removeItem("chhaya_token");
+        localStorage.removeItem("chhaya_user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

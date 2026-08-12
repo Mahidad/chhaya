@@ -135,3 +135,107 @@ CREATE INDEX IF NOT EXISTS idx_study_guide_views_user_id  ON study_guide_views (
 CREATE INDEX IF NOT EXISTS idx_study_guide_views_viewed_at ON study_guide_views (viewed_at);
 -- Add is_seed to existing tables that were created before this column existed
 ALTER TABLE study_guide_views ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ---------------------------------------------------------------------------
+-- courses  (Module 2 – Lamia)
+-- Organizational wrapper: a student creates Courses, each containing Chapters.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS courses (
+    id          TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id     TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    title       TEXT        NOT NULL,
+    order_index INTEGER     NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_courses_user_id ON courses (user_id);
+
+-- ---------------------------------------------------------------------------
+-- chapters  (Module 2 – Lamia)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS chapters (
+    id          TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id     TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    course_id   TEXT        NOT NULL REFERENCES courses (id) ON DELETE CASCADE,
+    title       TEXT        NOT NULL,
+    order_index INTEGER     NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_chapters_course_id ON chapters (course_id);
+
+-- Add optional chapter_id to study_guides so a guide can be filed into a chapter
+ALTER TABLE study_guides ADD COLUMN IF NOT EXISTS chapter_id TEXT REFERENCES chapters (id) ON DELETE SET NULL;
+
+-- ---------------------------------------------------------------------------
+-- notes  (Module 2 – Lamia)
+-- Uploaded or typed personal notes, attached to a chapter.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notes (
+    id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id      TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id   TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+    title        TEXT        NOT NULL,
+    note_type    TEXT        NOT NULL DEFAULT 'text',
+    text_content TEXT,
+    file_path    TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notes_chapter_id ON notes (chapter_id);
+
+-- ---------------------------------------------------------------------------
+-- highlights  (Module 2 – Lamia)
+-- Text selections highlighted by the student inside a study guide or note.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS highlights (
+    id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id      TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id   TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+    content_type TEXT        NOT NULL,
+    content_id   TEXT        NOT NULL,
+    quoted_text  TEXT        NOT NULL,
+    color        TEXT        NOT NULL DEFAULT 'amber',
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_highlights_content ON highlights (content_type, content_id);
+
+-- ---------------------------------------------------------------------------
+-- sticky_notes  (Module 2 – Lamia)
+-- Short free-text annotations anchored to content inside a chapter.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sticky_notes (
+    id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id      TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id   TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+    content_type TEXT        NOT NULL,
+    content_id   TEXT        NOT NULL,
+    body         TEXT        NOT NULL,
+    anchor_text  TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sticky_notes_content ON sticky_notes (content_type, content_id);
+
+-- ---------------------------------------------------------------------------
+-- glossary_entries  (Module 2 – Lamia)
+-- Personal vocabulary list per chapter, entries sourced from WordNet or custom.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS glossary_entries (
+    id             TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id        TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id     TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+    term           TEXT        NOT NULL,
+    definition     TEXT        NOT NULL,
+    part_of_speech TEXT,
+    source         TEXT        NOT NULL DEFAULT 'wordnet',
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_glossary_entries_chapter_id ON glossary_entries (chapter_id);
+
+-- Module 2 fix -- 2026-08-12: sticky notes removed as a feature.
+DROP TABLE IF EXISTS sticky_notes;
