@@ -4,6 +4,7 @@ import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
+import CodingStylesTab from "../../components/style-library/CodingStylesTab";
 import {
   listTeacherProfiles,
   updateTeacherProfile,
@@ -34,6 +35,7 @@ import {
 */
 
 export default function StyleLibraryPage() {
+  const [tab, setTab] = useState("teaching");
   const [profiles, setProfiles] = useState(null); // null = loading
   const [renaming, setRenaming] = useState(null); // profile being renamed, or null
   const [deleting, setDeleting] = useState(null); // profile being deleted, or null
@@ -87,6 +89,10 @@ export default function StyleLibraryPage() {
         </div>
       </div>
 
+      <TabBar tab={tab} setTab={setTab} />
+
+      {tab === "coding" ? <CodingStylesTab /> : (
+      <>
       {profiles.length === 0 ? (
         <div className="list-card">
           <div className="lib-empty">
@@ -132,6 +138,8 @@ export default function StyleLibraryPage() {
 
       {deleting && (
         <DeleteDialog profile={deleting} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />
+      )}
+      </>
       )}
     </AppShell>
   );
@@ -238,6 +246,15 @@ function DeleteDialog({ profile, onCancel, onConfirm }) {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TabBar({ tab, setTab }) {
+  return (
+    <div className="tab-bar">
+      <button className={`tab-btn ${tab === "teaching" ? "tab-btn-on" : ""}`} onClick={() => setTab("teaching")}>Teaching styles</button>
+      <button className={`tab-btn ${tab === "coding" ? "tab-btn-on" : ""}`} onClick={() => setTab("coding")}>Coding styles</button>
     </div>
   );
 }

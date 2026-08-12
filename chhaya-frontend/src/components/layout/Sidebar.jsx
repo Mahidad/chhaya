@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { to: "/concept-maps", label: "Concept maps", icon: "conceptMap" },
   { to: "/exam-papers", label: "Upload questions", icon: "exams" },
   { to: "/likely-questions", label: "Likely questions", icon: "fileText" },
+  { to: "/code-converter", label: "Code converter", icon: "code" },
 ];
 
 export default function Sidebar() {
