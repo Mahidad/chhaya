@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     # deterministic mock so the rest of the team can build against a
     # realistic response shape without waiting on a key. See
     # app/services/teaching_style_service.py
-    GEMINI_MODEL: str = "gemini-3.6-flash"
+    GEMINI_MODEL: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
