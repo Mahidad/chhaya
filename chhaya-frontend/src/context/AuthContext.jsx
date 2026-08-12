@@ -1,14 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import * as authApi from "../api/auth";
-import { checkReviewReminders } from "../api/reviewSchedules";
-
-
-function getLocalDateKey() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
 
 /*
   Holds "who's logged in" in one place so any component can ask via
@@ -51,7 +42,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("chhaya_login_date", getLocalDateKey());
       setUser(me);
       // A reminder failure must never block a successful login.
-      checkReviewReminders().catch(() => {});
+      checkReviewReminders().catch(() => { });
       return me;
     } finally {
       setLoading(false);
