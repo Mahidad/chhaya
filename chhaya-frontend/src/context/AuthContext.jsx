@@ -1,6 +1,14 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import * as authApi from "../api/auth";
 import { checkReviewReminders } from "../api/reviewSchedules";
+
+
+function getLocalDateKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 /*
   Holds "who's logged in" in one place so any component can ask via
@@ -15,9 +23,23 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("chhaya_user");
-    return saved ? JSON.parse(saved) : null;
+    const loginDate = localStorage.getItem("chhaya_login_date");
+    if (saved && loginDate === getLocalDateKey()) return JSON.parse(saved);
+
+    // Old sessions and sessions from a previous calendar day must log in again.
+    localStorage.removeItem("chhaya_token");
+    localStorage.removeItem("chhaya_user");
+    localStorage.removeItem("chhaya_login_date");
+    return null;
   });
   const [loading, setLoading] = useState(false);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem("chhaya_token");
+    localStorage.removeItem("chhaya_user");
+    localStorage.removeItem("chhaya_login_date");
+    setUser(null);
+  }, []);
 
   const login = useCallback(async (email, password) => {
     setLoading(true);
@@ -26,9 +48,10 @@ export function AuthProvider({ children }) {
       localStorage.setItem("chhaya_token", access_token);
       const me = await authApi.fetchMe();
       localStorage.setItem("chhaya_user", JSON.stringify(me));
+      localStorage.setItem("chhaya_login_date", getLocalDateKey());
       setUser(me);
       // A reminder failure must never block a successful login.
-      checkReviewReminders().catch(() => {});
+      checkReviewReminders().catch(() => { });
       return me;
     } finally {
       setLoading(false);
@@ -45,11 +68,23 @@ export function AuthProvider({ children }) {
     }
   }, [login]);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("chhaya_token");
-    localStorage.removeItem("chhaya_user");
-    setUser(null);
-  }, []);
+  useEffect(() => {
+    if (!user) return undefined;
+
+    function logoutIfDayChanged() {
+      if (localStorage.getItem("chhaya_login_date") !== getLocalDateKey()) {
+        logout();
+      }
+    }
+
+    // Also check when a background tab becomes visible again after midnight.
+    window.addEventListener("visibilitychange", logoutIfDayChanged);
+    const timer = window.setInterval(logoutIfDayChanged, 60_000);
+    return () => {
+      window.removeEventListener("visibilitychange", logoutIfDayChanged);
+      window.clearInterval(timer);
+    };
+  }, [user, logout]);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, signup, logout }}>

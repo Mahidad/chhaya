@@ -117,7 +117,7 @@ export default function StudyGuidesListPage() {
                     <span style={{ textTransform: "capitalize" }}>{g.depth}</span>
                   </div>
                   <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--line-soft)" }}>
-                    {g.status === "done" && (
+                    {g.status === "ready" && (
                       <Button
                         size="sm"
                         variant="primary"

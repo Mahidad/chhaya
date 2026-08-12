@@ -122,6 +122,7 @@ def _send_resend_email(*, recipient: str, subject: str, html: str) -> bool:
         headers={
             "Authorization": f"Bearer {settings.RESEND_API_KEY}",
             "Content-Type": "application/json",
+            "User-Agent": "chhaya-backend/1.0",
         },
     )
     try:
