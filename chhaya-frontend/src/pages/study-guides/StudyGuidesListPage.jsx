@@ -6,6 +6,7 @@ import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
 import { TextField } from "../../components/ui/Field";
 import { listStudyGuides, deleteStudyGuide, renameStudyGuide } from "../../api/studyGuides";
+import { addGuideToSchedule, listReviews } from "../../api/reviewSchedules";
 
 const STATUS_BADGE = {
   pending: { variant: undefined, label: "Pending" },
@@ -18,12 +19,17 @@ export default function StudyGuidesListPage() {
   const [guides, setGuides] = useState(null);
   const [deletingGuide, setDeletingGuide] = useState(null);
   const [renamingGuide, setRenamingGuide] = useState(null);
+  const [addingGuideId, setAddingGuideId] = useState(null);
+  const [scheduledGuideIds, setScheduledGuideIds] = useState([]);
   const navigate = useNavigate();
 
   const refresh = () => listStudyGuides().then(setGuides).catch(() => setGuides([]));
 
   useEffect(() => {
     refresh();
+    listReviews("all")
+      .then((reviews) => setScheduledGuideIds(reviews.map((review) => review.study_guide_id)))
+      .catch(() => setScheduledGuideIds([]));
   }, []);
 
   async function handleConfirmDelete() {
@@ -38,6 +44,18 @@ export default function StudyGuidesListPage() {
     await renameStudyGuide(renamingGuide.id, newTopic);
     setRenamingGuide(null);
     refresh();
+  }
+
+  async function handleAddToSchedule(event, guideId) {
+    event.preventDefault();
+    event.stopPropagation();
+    setAddingGuideId(guideId);
+    try {
+      await addGuideToSchedule(guideId);
+      setScheduledGuideIds((ids) => [...ids, guideId]);
+    } finally {
+      setAddingGuideId(null);
+    }
   }
 
   if (guides === null) {
@@ -99,6 +117,16 @@ export default function StudyGuidesListPage() {
                     <span style={{ textTransform: "capitalize" }}>{g.depth}</span>
                   </div>
                   <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid var(--line-soft)" }}>
+                    {g.status === "done" && (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        disabled={addingGuideId === g.id || scheduledGuideIds.includes(g.id)}
+                        onClick={(event) => handleAddToSchedule(event, g.id)}
+                      >
+                        {scheduledGuideIds.includes(g.id) ? "Added to scheduler" : addingGuideId === g.id ? "Adding..." : "Add to scheduler"}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"

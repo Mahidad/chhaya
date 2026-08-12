@@ -135,3 +135,28 @@ CREATE INDEX IF NOT EXISTS idx_study_guide_views_user_id  ON study_guide_views (
 CREATE INDEX IF NOT EXISTS idx_study_guide_views_viewed_at ON study_guide_views (viewed_at);
 -- Add is_seed to existing tables that were created before this column existed
 ALTER TABLE study_guide_views ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE;
+
+
+-- ---------------------------------------------------------------------------
+-- review_schedules  (Module 2 Feature 4 – Amiyo)
+-- One review entry per user/study guide. A completed-guide view inserts this
+-- record once; later recall ratings update its SM-2 interval and due date.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS review_schedules (
+    id                TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id           TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    study_guide_id    TEXT        NOT NULL REFERENCES study_guides (id) ON DELETE CASCADE,
+    topic             TEXT        NOT NULL,
+    next_review_date  DATE        NOT NULL DEFAULT CURRENT_DATE,
+    interval_days     INTEGER     NOT NULL DEFAULT 0,
+    ease_factor       DOUBLE PRECISION NOT NULL DEFAULT 2.5,
+    review_count      INTEGER     NOT NULL DEFAULT 0,
+    last_reviewed_on  DATE,
+    last_reminded_on  DATE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, study_guide_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_schedules_user_due
+    ON review_schedules (user_id, next_review_date);

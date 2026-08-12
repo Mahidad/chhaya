@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     # app/services/teaching_style_service.py
     GEMINI_MODEL: str = "gemini-3.6-flash"
 
+    # --- Email reminders (Amiyo Module 2) ---
+    # Leave unset during local development; the review page still works and
+    # reminder checks report skipped emails until Resend is configured.
+    RESEND_API_KEY: str | None = None
+    RESEND_FROM_EMAIL: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
