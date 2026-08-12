@@ -91,11 +91,11 @@ export default function ReviewSchedulePage() {
         </div>
       </div>
 
-      <div className="tabs" style={{ marginBottom: 16 }}>
+      <div className="tab-bar">
         {FILTERS.map((item) => (
           <button
             key={item.value}
-            className={`tab ${filter === item.value ? "active" : ""}`}
+            className={`tab-btn ${filter === item.value ? "tab-btn-on" : ""}`}
             onClick={() => changeFilter(item.value)}
           >
             {item.label}
@@ -114,7 +114,7 @@ export default function ReviewSchedulePage() {
       ) : (
         <div className="list-card">
           {reviews.map((review) => (
-            <div className="card-pad" key={review.id} style={{ borderBottom: "1px solid var(--line-soft)" }}>
+            <div className="prow" key={review.id} style={{ display: "block" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ flex: "1 1 230px" }}>
                   <div style={{ fontWeight: 700, color: "var(--ink)" }}>{review.topic}</div>
