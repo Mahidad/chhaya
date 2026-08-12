@@ -18,6 +18,7 @@ class TeacherProfile:
     source_id: str
     display_name: str
     created_at: datetime
+    channel_name: str | None = None
     is_favorite: bool = False
     pacing: str | None = None
     vocabulary_level: str | None = None

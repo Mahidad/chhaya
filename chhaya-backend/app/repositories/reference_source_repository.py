@@ -76,6 +76,18 @@ class ReferenceSourceRepository(BaseRepository[ReferenceSource]):
         self._attach_videos(db, sources)
         return sources
 
+    def find_existing_by_url(
+        self, db: psycopg.Connection, *, user_id: str, url: str
+    ) -> ReferenceSource | None:
+        """Exact-URL duplicate check -- catches re-submitting the identical link."""
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM reference_sources WHERE user_id = %s AND url = %s LIMIT 1",
+                (user_id, url),
+            )
+            row = cur.fetchone()
+        return ReferenceSource(**row) if row else None
+
 
 class VideoRepository(BaseRepository[Video]):
     _table = "videos"
@@ -101,6 +113,38 @@ class VideoRepository(BaseRepository[Video]):
                 cur.execute(sql, [data[c] for c in cols])
                 results.append(self._row_to_obj(cur.fetchone()))
         return results
+
+    def find_existing_video_for_user(
+        self, db: psycopg.Connection, *, user_id: str, youtube_video_id: str
+    ) -> dict | None:
+        """
+        Broader duplicate check than URL matching: catches the SAME video
+        re-submitted under a different URL format (youtu.be/xyz vs
+        youtube.com/watch?v=xyz), or reached a second time via a playlist
+        after being added individually the first time. Returns a plain
+        dict (not a Video) since it joins in fields from reference_sources
+        that don't belong on the Video dataclass.
+        """
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT v.*, rs.title AS source_title, rs.id AS existing_source_id
+                FROM videos v
+                JOIN reference_sources rs ON v.source_id = rs.id
+                WHERE rs.user_id = %s AND v.youtube_video_id = %s
+                LIMIT 1
+                """,
+                (user_id, youtube_video_id),
+            )
+            return cur.fetchone()
+
+    def list_for_source(self, db: psycopg.Connection, *, source_id: str) -> list[Video]:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM videos WHERE source_id = %s ORDER BY order_index",
+                (source_id,),
+            )
+            return [Video(**row) for row in cur.fetchall()]
 
 
 reference_source_repository = ReferenceSourceRepository()

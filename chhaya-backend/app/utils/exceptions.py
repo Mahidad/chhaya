@@ -19,3 +19,15 @@ class PermissionDeniedError(Exception):
 class ExternalServiceError(Exception):
     """Raised when a third-party call (Gemini, YouTube) fails."""
     pass
+
+class DuplicateSourceError(Exception):
+    """
+    Raised when a submitted link matches something this user already
+    extracted, and they haven't confirmed they want to extract it again
+    (see ReferenceSourceCreate.force). Carries enough info for the
+    endpoint to tell the frontend what already exists.
+    """
+    def __init__(self, *, existing_source_id: str, existing_title: str):
+        self.existing_source_id = existing_source_id
+        self.existing_title = existing_title
+        super().__init__(f"Already extracted as '{existing_title}'.")

@@ -11,6 +11,7 @@ from app.models.study_guide import StudyGuide, GuideStatus
 from app.repositories.study_guide_repository import study_guide_repository
 from app.repositories.teacher_profile_repository import teacher_profile_repository
 from app.schemas.study_guide import StudyGuideCreate
+from app.services import preference_service
 from app.services.guide_generation_service import generate_guide_text, generate_formula_sheet, generate_bangla_translation
 from app.utils.exceptions import NotFoundError
 
@@ -56,6 +57,13 @@ def create_and_generate(
             updates["bangla_content"] = generate_bangla_translation(text=content)
 
         guide = study_guide_repository.update(db, db_obj=guide, obj_in=updates)
+        # Generating a guide from a profile is a *usage* signal -- one of
+        # the two inputs Mahidad's preference-profile weighting depends on
+        # (see preference_service.py). Recomputed here, not just when a
+        # new source is added, so "most-used teacher profile" stays
+        # accurate the moment it changes rather than waiting on an
+        # unrelated trigger elsewhere in the app.
+        preference_service.recompute_preference_profile(db, user_id=user_id)
     except Exception as exc:  # noqa: BLE001
         guide = study_guide_repository.update(
             db,

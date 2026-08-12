@@ -54,6 +54,8 @@ class Video:
     youtube_video_id: str
     title: str
     transcript_status: str
+    teacher_profile_id: str | None = None
+    channel_name: str | None = None
     order_index: int = 0
     duration_seconds: int | None = None
     transcript_text: str | None = None

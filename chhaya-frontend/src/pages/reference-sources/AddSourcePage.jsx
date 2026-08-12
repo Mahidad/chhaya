@@ -9,14 +9,19 @@ import AnalysingPanel from "../../components/reference-sources/AnalysingPanel";
 import { createReferenceSource } from "../../api/referenceSources";
 
 /*
-  Matches mahidad-f1-02-add-source.html. Two kinds of fields here, marked
-  clearly so nobody on the team mistakes one for the other later:
-    - WIRED fields (title, url, source type) actually go to the API.
+
+  DUPLICATE-LINK FLOW: submitting a link the backend recognizes as
+  already-extracted doesn't fail outright -- the API returns 409 with the
+  existing source's name (see app/utils/exceptions.py's
+  DuplicateSourceError on the backend). This page catches that
+  specifically and shows a confirm dialog instead of a plain error,
+  because "already extracted, want to do it again?" is a real choice for
+  the student to make, not just a mistake to correct.
+
+  Two kinds of fields, still marked clearly:
+    - WIRED fields (title, url, source type, force) go to the API.
     - DECORATIVE fields (teacher, course, cleaning options) exist in the
-      mockup but the backend doesn't accept them yet -- disabled with a
-      "coming soon" hint instead of silently doing nothing when touched.
-  Extending the backend's `ReferenceSourceCreate` schema + service to
-  accept these is a natural next task once the core loop is solid.
+      mockup but the backend doesn't accept them yet.
 */
 export default function AddSourcePage() {
   const navigate = useNavigate();
@@ -26,18 +31,28 @@ export default function AddSourcePage() {
   const [skipShort, setSkipShort] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState(null); // { existingTitle } | null
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function submit({ force }) {
     setError("");
     setSubmitting(true);
     try {
-      const source = await createReferenceSource({ title, sourceType, url, skipShort });
+      const source = await createReferenceSource({ title, sourceType, url, force });
       navigate(`/sources/${source.id}`);
     } catch (err) {
+      if (err.response?.status === 409) {
+        setSubmitting(false);
+        setDuplicateWarning({ existingTitle: err.response.data.detail.existing_title });
+        return;
+      }
       setError(err.response?.data?.detail || "Could not add that source. Double-check the link and try again.");
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    submit({ force: false });
   }
 
   if (submitting) {
@@ -46,7 +61,11 @@ export default function AddSourcePage() {
         <div className="page-head">
           <div>
             <div className="page-title">Reading {title || "your source"}</div>
-            <div className="page-sub">Keep this tab open, it runs in the background too.</div>
+            <div className="page-sub">
+              {sourceType === "youtube_playlist"
+                ? "Grouping videos by instructor and building a style profile per teacher."
+                : "Keep this tab open, it runs in the background too."}
+            </div>
           </div>
         </div>
         <AnalysingPanel title="Building the style profile" subtitle="This usually takes under a minute" />
@@ -72,13 +91,17 @@ export default function AddSourcePage() {
         <div className="col-form card">
           <div className="form-grid">
             <TextField
-              label="YouTube video link"
+              label={sourceType === "youtube_playlist" ? "YouTube playlist link" : "YouTube video link"}
               icon="sources"
-              placeholder="youtube.com/watch?v=..."
+              placeholder={sourceType === "youtube_playlist" ? "youtube.com/playlist?list=..." : "youtube.com/watch?v=..."}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               required
-              hint="Public YouTube videos with captions on are supported today. Playlist crawling is on the roadmap."
+              hint={
+                sourceType === "youtube_playlist"
+                  ? "If the playlist mixes more than one instructor's videos, Chhaya groups them by channel and builds one style profile per instructor."
+                  : "Public YouTube videos with captions on are supported."
+              }
             />
             <div className="row-2">
               <TextField
@@ -90,8 +113,8 @@ export default function AddSourcePage() {
               />
               <SelectField label="Source type" value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
                 <option value="youtube_video">Single YouTube video</option>
-                <option value="youtube_playlist">YouTube playlist (coming soon)</option>
-                <option value="course_link">Course link (coming soon)</option>
+                <option value="youtube_playlist">YouTube playlist</option>
+                <option value="course_link" disabled>Course link (coming soon)</option>
               </SelectField>
             </div>
 
@@ -104,7 +127,7 @@ export default function AddSourcePage() {
               <div className="label" style={{ marginBottom: 4 }}>How the transcript is cleaned</div>
               <Checkbox
                 checked
-                onChange={() => {}}
+                onChange={() => { }}
                 label="Strip filler words and timestamps"
                 sub="Removes “umm”, “so basically”, caption noise."
                 right={<span className="badge">Always on</span>}
@@ -136,19 +159,59 @@ export default function AddSourcePage() {
           <div className="card-pad" style={{ padding: "16px 18px" }}>
             <div className="vid-row" style={{ borderTop: "none", paddingTop: 0 }}>
               <span className="vid-idx">1</span>
-              <span className="vid-name">Transcript is fetched from YouTube's captions.</span>
+              <span className="vid-name">
+                {sourceType === "youtube_playlist"
+                  ? "Every video's transcript is fetched and grouped by uploader."
+                  : "Transcript is fetched from YouTube's captions."}
+              </span>
             </div>
             <div className="vid-row">
               <span className="vid-idx">2</span>
-              <span className="vid-name">Gemini reads it and scores pacing, vocabulary, analogies, and examples.</span>
+              <span className="vid-name">
+                {sourceType === "youtube_playlist"
+                  ? "Gemini scores style separately for each instructor detected."
+                  : "Gemini reads it and scores pacing, vocabulary, analogies, and examples."}
+              </span>
             </div>
             <div className="vid-row">
               <span className="vid-idx">3</span>
-              <span className="vid-name">A reusable style profile lands in your library.</span>
+              <span className="vid-name">
+                {sourceType === "youtube_playlist"
+                  ? "One reusable style profile per instructor lands in your library."
+                  : "A reusable style profile lands in your library."}
+              </span>
             </div>
           </div>
         </div>
       </form>
+
+      {duplicateWarning && (
+        <div className="overlay" onClick={() => setDuplicateWarning(null)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="dialog-pad">
+              <div className="dialog-icon di-primary">
+                <Icon name="alertTriangle" size={20} />
+              </div>
+              <div className="dialog-title">Already extracted</div>
+              <div className="dialog-copy">
+                This link matches a source you already have — "{duplicateWarning.existingTitle}". Extract it
+                again under the name "{title}"?
+              </div>
+            </div>
+            <div className="dialog-foot">
+              <Button variant="ghost" onClick={() => setDuplicateWarning(null)}>Cancel</Button>
+              <Button
+                onClick={() => {
+                  setDuplicateWarning(null);
+                  submit({ force: true });
+                }}
+              >
+                Extract again
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

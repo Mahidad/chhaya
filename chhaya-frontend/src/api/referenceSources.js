@@ -17,12 +17,13 @@ export async function getReferenceSource(id) {
   return data;
 }
 
-export async function createReferenceSource({ title, sourceType, url, skipShort = false }) {
+export async function createReferenceSource({ title, sourceType, url, skipShort = false, force = false }) {
   const { data } = await client.post("/reference-sources", {
     title,
     source_type: sourceType,
     url,
     skip_short: skipShort,
+    force,
   });
   return data;
 }
@@ -35,8 +36,10 @@ export async function renameReferenceSource(id, title) {
   const { data } = await client.patch(`/reference-sources/${id}`, { title });
   return data;
 }
-
-export async function getSourceProfile(id) {
-  const { data } = await client.get(`/reference-sources/${id}/profile`);
+export async function getSourceProfiles(id) {
+  // Plural-- a playlist source can produce more than one profile,
+  // one per detected instructor. See the backend README's "multiple
+  // teachers in one playlist" note.
+  const { data } = await client.get(`/reference-sources/${id}/profiles`);
   return data;
 }

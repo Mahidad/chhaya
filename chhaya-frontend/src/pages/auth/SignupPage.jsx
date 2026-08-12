@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { TextField } from "../../components/ui/Field";
+import { TextField, PasswordField, PASSWORD_REQUIREMENTS } from "../../components/ui/Field";
 import logoWhite from "../../assets/logo-white.png";
 
 export default function SignupPage() {
@@ -17,8 +17,9 @@ export default function SignupPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const failedRequirement = PASSWORD_REQUIREMENTS.find((req) => !req.test(password));
+    if (failedRequirement) {
+      setError(`Password needs: ${failedRequirement.label.toLowerCase()}.`);
       return;
     }
     try {
@@ -66,13 +67,12 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <TextField
+            <PasswordField
               label="Password"
-              type="password"
               placeholder="At least 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
+              showStrength
               required
             />
             {error && <div className="error-text">{error}</div>}
