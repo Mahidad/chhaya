@@ -1380,3 +1380,130 @@
   background: #ffffff;
 }
 
+/* --- Annotations & Glossary Styles --- */
+.annot-toolbar {
+  background: #ffcc80;
+  border: 1px solid #e0b06b;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+  display: flex;
+  padding: 4px;
+  gap: 2px;
+  z-index: 1000;
+  transform: translateX(-50%);
+  align-items: center;
+}
+.annot-toolbar-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #5c3c10;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+.annot-toolbar-btn:hover {
+  background: rgba(92, 60, 16, 0.08);
+}
+.annot-sticky-textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 13px;
+  resize: vertical;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+}
+.annot-sticky-textarea:focus {
+  border-color: var(--primary);
+}
+.annot-define-popover {
+  flex-direction: column;
+  padding: 12px;
+  width: 280px;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+/* Glossary Layout Styling */
+.glossary-row {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--canvas);
+  border: 1px solid var(--line-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: all 0.15s ease;
+}
+.glossary-row:hover {
+  border-color: var(--line);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.glossary-term {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.glossary-def {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+/* Print PDF Export Styling */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .app-sidebar,
+  .topbar,
+  .sidebar,
+  .nav,
+  .navbar,
+  .page-actions,
+  .lang-toggle,
+  .mini-btn,
+  .annot-toolbar,
+  .hint,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  body, .app-shell, .main-content, .split {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  .card {
+    border: 1px solid #e0e0e0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 20px !important;
+  }
+
+  .guide-body {
+    font-size: 13pt !important;
+    line-height: 1.6 !important;
+    color: #000000 !important;
+  }
+}
+
+

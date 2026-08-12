@@ -19,6 +19,10 @@ import LikelyQuestionsListPage from "./pages/likely-questions/LikelyQuestionsLis
 import CreateLikelyQuestionsPage from "./pages/likely-questions/CreateLikelyQuestionsPage";
 import LikelyQuestionsDetailPage from "./pages/likely-questions/LikelyQuestionsDetailPage";
 import AnalyticsDashboardPage from "./pages/progress/AnalyticsDashboardPage";
+import CoursesListPage from "./pages/courses/CoursesListPage";
+import CourseDetailPage from "./pages/courses/CourseDetailPage";
+import ChapterWorkspacePage from "./pages/courses/ChapterWorkspacePage";
+import NoteViewerPage from "./pages/courses/NoteViewerPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
 
@@ -53,6 +57,12 @@ export default function App() {
             <Route path="/guides" element={<ProtectedRoute><StudyGuidesListPage /></ProtectedRoute>} />
             <Route path="/guides/new" element={<ProtectedRoute><ConfigureGuidePage /></ProtectedRoute>} />
             <Route path="/guides/:id" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
+
+            <Route path="/courses" element={<ProtectedRoute><CoursesListPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId" element={<ProtectedRoute><ChapterWorkspacePage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId/guides/:guideId" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId/notes/:noteId" element={<ProtectedRoute><NoteViewerPage /></ProtectedRoute>} />
 
             <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
             <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />

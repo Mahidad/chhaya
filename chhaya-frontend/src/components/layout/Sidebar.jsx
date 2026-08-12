@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: "/sources", label: "Reference sources", icon: "sources" },
   { to: "/library", label: "Style library", icon: "library" },
   { to: "/guides", label: "Study guides", icon: "guides" },
+  { to: "/courses", label: "Courses", icon: "courses" },
   { to: "/concept-maps", label: "Concept maps", icon: "conceptMap" },
   { to: "/exam-papers", label: "Upload questions", icon: "exams" },
   { to: "/likely-questions", label: "Likely questions", icon: "fileText" },

@@ -62,15 +62,17 @@ def delete_study_guide(
 
 
 @router.patch("/{guide_id}", response_model=StudyGuideOut)
-def rename_study_guide(
+def update_study_guide(
     guide_id: str,
     payload: StudyGuideUpdate,
     db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return study_guide_service.rename_guide(
-            db, user_id=current_user.id, guide_id=guide_id, topic=payload.topic
+        return study_guide_service.update_guide(
+            db, user_id=current_user.id, guide_id=guide_id,
+            topic=payload.topic, chapter_id=payload.chapter_id,
+            content=payload.content, formula_sheet_content=payload.formula_sheet_content,
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

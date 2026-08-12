@@ -13,6 +13,10 @@ from app.api.v1.endpoints import (
     exam_papers,
     likely_questions,
     progress,
+    annotations,
+    courses,
+    glossary,
+    notes,
 )
 
 api_router = APIRouter()
@@ -23,3 +27,8 @@ api_router.include_router(study_guides.router)
 api_router.include_router(exam_papers.router)
 api_router.include_router(likely_questions.router)
 api_router.include_router(progress.router)
+api_router.include_router(annotations.router)
+api_router.include_router(courses.router)
+api_router.include_router(courses.chapters_router)
+api_router.include_router(glossary.router)
+api_router.include_router(notes.router)

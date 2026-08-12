@@ -99,6 +99,11 @@ const PATHS = {
       <path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" />
     </>
   ),
+  courses: (
+    <>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 16, className = "", ...rest }) {
