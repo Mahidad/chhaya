@@ -1615,18 +1615,25 @@
 .code-line {
   display: flex;
   align-items: flex-start;
-  padding: 0 14px;
+  padding: 0 14px 0 11px;
   font-family: "Fira Mono", "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
   line-height: 1.65;
   cursor: pointer;
   transition: background 0.1s ease;
+  border-left: 3px solid transparent;
 }
-.code-line:hover {
-  background: var(--canvas);
+.code-line:hover,
+.code-line-hover {
+  background: rgba(14, 107, 84, 0.08);
+  border-left-color: rgba(14, 107, 84, 0.3);
 }
-.code-line-hl {
+.code-line-active {
   background: var(--primary-soft) !important;
+  border-left-color: var(--primary) !important;
+}
+.code-line-active.code-line-hover {
+  background: #d4ebd6 !important;
 }
 .code-line-num {
   width: 36px;

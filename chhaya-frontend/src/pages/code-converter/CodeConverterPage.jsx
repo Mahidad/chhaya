@@ -44,6 +44,7 @@ export default function CodeConverterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [activeMapping, setActiveMapping] = useState(null);
+  const [hoveredMapping, setHoveredMapping] = useState(null);
   const [editing, setEditing] = useState(true); // true while the source pane is still an editable textarea
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function CodeConverterPage() {
     setConversion(null);
     setError("");
     setActiveMapping(null);
+    setHoveredMapping(null);
     setEditing(true);
   }
 
@@ -62,6 +64,7 @@ export default function CodeConverterPage() {
     setError("");
     setSubmitting(true);
     setActiveMapping(null);
+    setHoveredMapping(null);
     try {
       const result =
         mode === "translate"
@@ -99,6 +102,40 @@ export default function CodeConverterPage() {
       (b) => lineNum >= b.output_lines[0] && lineNum <= b.output_lines[1]
     );
     setActiveMapping(block || null);
+  }
+
+  function handleSourceLineHover(lineNum) {
+    if (!conversion?.mapping) {
+      setHoveredMapping({ source_lines: [lineNum, lineNum], output_lines: null });
+      return;
+    }
+    const block = conversion.mapping.find(
+      (b) => lineNum >= b.source_lines[0] && lineNum <= b.source_lines[1]
+    );
+    if (block) {
+      setHoveredMapping(block);
+    } else {
+      setHoveredMapping({ source_lines: [lineNum, lineNum], output_lines: null });
+    }
+  }
+
+  function handleOutputLineHover(lineNum) {
+    if (!conversion?.mapping) {
+      setHoveredMapping({ source_lines: null, output_lines: [lineNum, lineNum] });
+      return;
+    }
+    const block = conversion.mapping.find(
+      (b) => lineNum >= b.output_lines[0] && lineNum <= b.output_lines[1]
+    );
+    if (block) {
+      setHoveredMapping(block);
+    } else {
+      setHoveredMapping({ source_lines: null, output_lines: [lineNum, lineNum] });
+    }
+  }
+
+  function handleLineMouseLeave() {
+    setHoveredMapping(null);
   }
 
   const canSubmit =
@@ -160,7 +197,14 @@ export default function CodeConverterPage() {
                   spellCheck={false}
                 />
               ) : (
-                <CodeLines code={sourceCode} activeRange={activeMapping?.source_lines} onLineClick={handleSourceLineClick} />
+                <CodeLines
+                  code={sourceCode}
+                  activeRange={activeMapping?.source_lines}
+                  hoveredRange={hoveredMapping?.source_lines}
+                  onLineClick={handleSourceLineClick}
+                  onLineHover={handleSourceLineHover}
+                  onMouseLeave={handleLineMouseLeave}
+                />
               )
             ) : (
               <textarea
@@ -215,7 +259,14 @@ export default function CodeConverterPage() {
                 </div>
               </div>
             ) : (
-              <CodeLines code={conversion.output_code} activeRange={activeMapping?.output_lines} onLineClick={handleOutputLineClick} />
+              <CodeLines
+                code={conversion.output_code}
+                activeRange={activeMapping?.output_lines}
+                hoveredRange={hoveredMapping?.output_lines}
+                onLineClick={handleOutputLineClick}
+                onLineHover={handleOutputLineHover}
+                onMouseLeave={handleLineMouseLeave}
+              />
             )}
 
             {activeMapping?.description && (

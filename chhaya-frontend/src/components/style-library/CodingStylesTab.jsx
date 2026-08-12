@@ -15,16 +15,12 @@ import {
   extracted by the crude regex-based analyzer (app/utils/code_style_analyzer.py
   on the backend, zero AI involved), used by the HLL Code Converter to
   write translated/generated code the way the student already writes it.
-
-  Structurally a sibling to the Teaching styles tab (same pin/rename/
-  delete pattern) but genuinely different data underneath -- indentation,
-  naming convention, loop/branching habits, complexity, not
-  pacing/vocabulary/analogies.
 */
 
 const LANGUAGES = ["python", "java", "cpp", "javascript", "c"];
 const LANGUAGE_LABELS = { python: "Python", java: "Java", cpp: "C++", javascript: "JavaScript", c: "C" };
 
+const INDENT_LABELS = { spaces: "spaces", tabs: "tabs" };
 const LOOP_LABELS = {
   for_dominant: "mostly for-loops",
   while_dominant: "mostly while-loops",
@@ -39,13 +35,17 @@ const BRANCH_LABELS = {
   none: "no branching in sample",
 };
 
-export default function CodingStylesTab() {
+export default function CodingStylesTab({ onCountChange }) {
   const [profiles, setProfiles] = useState(null);
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  const refresh = () => listCodeStyleProfiles().then(setProfiles);
+  const refresh = () =>
+    listCodeStyleProfiles().then((data) => {
+      setProfiles(data);
+      onCountChange?.(data.length);
+    });
 
   useEffect(() => {
     refresh();
@@ -68,8 +68,13 @@ export default function CodingStylesTab() {
     return <div style={{ color: "var(--muted)", fontSize: 13 }}>Loading...</div>;
   }
 
+  const pinned = profiles.filter((p) => p.is_favorite);
+  const rest = profiles.filter((p) => !p.is_favorite);
+
   return (
     <>
+      {profiles.length > 0 && <CodingPreferenceCard profiles={profiles} />}
+
       <div className="page-actions" style={{ marginBottom: 16, justifyContent: "flex-end", display: "flex" }}>
         <Button icon={<Icon name="plus" size={16} />} onClick={() => setAdding(true)}>
           Add coding style
@@ -91,40 +96,19 @@ export default function CodingStylesTab() {
         </div>
       ) : (
         <div className="list-card">
-          {profiles.map((p) => (
-            <div className="prow" key={p.id} style={{ alignItems: "flex-start" }}>
-              <span
-                className={`pin-cell ${p.is_favorite ? "pin-on" : ""}`}
-                onClick={() => togglePin(p)}
-                title={p.is_favorite ? "Unpin" : "Pin"}
-                style={{ marginTop: 3 }}
-              >
-                <Icon name="pin" size={16} />
-              </span>
-              <div className="avatar av-plum">{"<>"}</div>
-              <div className="prow-id" style={{ flex: 1 }}>
-                <div className="prow-name">{p.label}</div>
-                <div className="prow-course">{LANGUAGE_LABELS[p.language] || p.language}</div>
-                <div className="prow-tags" style={{ marginTop: 6 }}>
-                  <Badge>{p.indent_size} {p.indent_style}</Badge>
-                  <Badge>{p.naming_convention}</Badge>
-                  {p.brace_style && <Badge>{p.brace_style.replace("_", " ")} braces</Badge>}
-                  <Badge variant="iris">{LOOP_LABELS[p.loop_style]}</Badge>
-                  <Badge variant="plum">{BRANCH_LABELS[p.branching_style]}</Badge>
-                  <Badge variant={p.cyclomatic_complexity > 8 ? "amber" : undefined}>
-                    complexity {p.cyclomatic_complexity}
-                  </Badge>
-                </div>
+          {pinned.length > 0 && (
+            <>
+              <div className="list-section">
+                <Icon name="pin" size={13} /> Pinned
               </div>
-              <div className="prow-act">
-                <button className="mini-btn" onClick={() => setRenaming(p)} title="Rename">
-                  <Icon name="fileText" size={15} />
-                </button>
-                <button className="mini-btn" onClick={() => setDeleting(p)} title="Delete">
-                  <Icon name="trash" size={15} />
-                </button>
-              </div>
-            </div>
+              {pinned.map((p) => (
+                <CodingProfileRow key={p.id} profile={p} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} />
+              ))}
+            </>
+          )}
+          <div className="list-section">All profiles</div>
+          {rest.map((p) => (
+            <CodingProfileRow key={p.id} profile={p} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} />
           ))}
         </div>
       )}
@@ -166,6 +150,111 @@ export default function CodingStylesTab() {
         </div>
       )}
     </>
+  );
+}
+
+function computeCodingSummary(profiles) {
+  if (!profiles || profiles.length === 0) return null;
+
+  const indents = {};
+  const namings = {};
+  const loops = {};
+  const branches = {};
+  let totalComplexity = 0;
+
+  profiles.forEach((p) => {
+    const weight = p.is_favorite ? 3 : 1;
+    const indKey = `${p.indent_size} ${INDENT_LABELS[p.indent_style] || p.indent_style}`;
+    indents[indKey] = (indents[indKey] || 0) + weight;
+
+    if (p.naming_convention) {
+      namings[p.naming_convention] = (namings[p.naming_convention] || 0) + weight;
+    }
+
+    if (p.loop_style && p.loop_style !== "none") {
+      const loopLabel = LOOP_LABELS[p.loop_style] || p.loop_style;
+      loops[loopLabel] = (loops[loopLabel] || 0) + weight;
+    }
+
+    if (p.branching_style && p.branching_style !== "none") {
+      const branchLabel = BRANCH_LABELS[p.branching_style] || p.branching_style;
+      branches[branchLabel] = (branches[branchLabel] || 0) + weight;
+    }
+
+    totalComplexity += (p.cyclomatic_complexity || 1) * weight;
+  });
+
+  const totalWeights = profiles.reduce((acc, p) => acc + (p.is_favorite ? 3 : 1), 0);
+  const getTop = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1])[0]?.[0] || "Standard";
+
+  return {
+    indent: getTop(indents),
+    naming: getTop(namings),
+    loop: getTop(loops),
+    branching: getTop(branches),
+    avgComplexity: (totalComplexity / totalWeights).toFixed(1),
+  };
+}
+
+function CodingPreferenceCard({ profiles }) {
+  const summary = computeCodingSummary(profiles);
+  if (!summary) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16, padding: "16px 18px" }}>
+      <div className="card-head" style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="code" size={18} style={{ color: "var(--primary)" }} />
+          <span className="card-title">Coding Style Preference Summary</span>
+        </div>
+        <span className="card-note">Derived across {profiles.length} coding style{profiles.length === 1 ? "" : "s"}</span>
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <Badge variant="primary">Indentation: {summary.indent}</Badge>
+        <Badge variant="iris">Naming: {summary.naming}</Badge>
+        <Badge variant="amber">Loops: {summary.loop}</Badge>
+        <Badge variant="plum">Branching: {summary.branching}</Badge>
+        <Badge>Avg Complexity: {summary.avgComplexity}</Badge>
+      </div>
+    </div>
+  );
+}
+
+function CodingProfileRow({ profile: p, onTogglePin, onRename, onDelete }) {
+  return (
+    <div className="prow" style={{ alignItems: "flex-start" }}>
+      <span
+        className={`pin-cell ${p.is_favorite ? "pin-on" : ""}`}
+        onClick={() => onTogglePin(p)}
+        title={p.is_favorite ? "Unpin" : "Pin"}
+        style={{ marginTop: 3 }}
+      >
+        <Icon name="pin" size={16} />
+      </span>
+      <div className="avatar av-plum">{"<>"}</div>
+      <div className="prow-id" style={{ flex: 1 }}>
+        <div className="prow-name">{p.label}</div>
+        <div className="prow-course">{LANGUAGE_LABELS[p.language] || p.language}</div>
+        <div className="prow-tags" style={{ marginTop: 6 }}>
+          <Badge>{p.indent_size} {INDENT_LABELS[p.indent_style] || p.indent_style}</Badge>
+          <Badge>{p.naming_convention}</Badge>
+          {p.brace_style && <Badge>{p.brace_style.replace("_", " ")} braces</Badge>}
+          <Badge variant="iris">{LOOP_LABELS[p.loop_style] || p.loop_style}</Badge>
+          <Badge variant="plum">{BRANCH_LABELS[p.branching_style] || p.branching_style}</Badge>
+          <Badge variant={p.cyclomatic_complexity > 8 ? "amber" : undefined}>
+            complexity {p.cyclomatic_complexity}
+          </Badge>
+        </div>
+      </div>
+      <div className="prow-act">
+        <button className="mini-btn" onClick={() => onRename(p)} title="Rename">
+          <Icon name="fileText" size={15} />
+        </button>
+        <button className="mini-btn" onClick={() => onDelete(p)} title="Delete">
+          <Icon name="trash" size={15} />
+        </button>
+      </div>
+    </div>
   );
 }
 

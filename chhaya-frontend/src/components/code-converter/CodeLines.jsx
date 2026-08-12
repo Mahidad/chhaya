@@ -12,19 +12,28 @@
   between 0-indexed arrays and 1-indexed line numbers is exactly the kind
   of off-by-one bug worth avoiding by just being consistent everywhere.
 */
-export default function CodeLines({ code, activeRange, onLineClick }) {
+export default function CodeLines({
+  code,
+  activeRange,
+  hoveredRange,
+  onLineClick,
+  onLineHover,
+  onMouseLeave,
+}) {
   const lines = (code || "").split("\n");
 
   return (
-    <div className="code-lines">
+    <div className="code-lines" onMouseLeave={onMouseLeave}>
       {lines.map((line, idx) => {
         const lineNum = idx + 1;
         const isActive = activeRange && lineNum >= activeRange[0] && lineNum <= activeRange[1];
+        const isHovered = hoveredRange && lineNum >= hoveredRange[0] && lineNum <= hoveredRange[1];
         return (
           <div
             key={idx}
-            className={`code-line ${isActive ? "code-line-active" : ""}`}
-            onClick={() => onLineClick(lineNum)}
+            className={`code-line ${isActive ? "code-line-active" : ""} ${isHovered ? "code-line-hover" : ""}`}
+            onClick={() => onLineClick && onLineClick(lineNum)}
+            onMouseEnter={() => onLineHover && onLineHover(lineNum)}
           >
             <span className="code-line-num">{lineNum}</span>
             <span className="code-line-text">{line.length ? line : " "}</span>

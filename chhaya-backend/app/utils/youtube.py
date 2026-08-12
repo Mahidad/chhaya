@@ -53,32 +53,121 @@ def clean_transcript_text(raw_text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def fetch_transcript_text_ytdlp(video_id: str) -> str:
+    """Fallback method using yt-dlp to extract auto-generated or manual subtitles when youtube-transcript-api is blocked."""
+    import yt_dlp
+    import urllib.request
+    import json
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    ydl_opts = {
+        "skip_download": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": ["en", ".*"],
+        "quiet": True,
+        "no_warnings": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            subtitles = info.get("subtitles") or info.get("automatic_captions") or {}
+            
+            # Find an english or best available subtitle track
+            sub_track = None
+            for lang in ["en", "en-US", "en-GB"]:
+                if lang in subtitles:
+                    sub_track = subtitles[lang]
+                    break
+            if not sub_track and subtitles:
+                sub_track = next(iter(subtitles.values()))
+
+            if not sub_track:
+                raise TranscriptUnavailableError(f"No subtitle tracks found for video {video_id} via yt-dlp.")
+
+            # Find json3 or vtt format url
+            json_fmt = next((item for item in sub_track if item.get("ext") == "json3"), None)
+            if json_fmt and "url" in json_fmt:
+                req = urllib.request.Request(json_fmt["url"], headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    events = data.get("events", [])
+                    text_parts = []
+                    for ev in events:
+                        for seg in ev.get("segs", []):
+                            t = seg.get("utf8", "").strip()
+                            if t and t != "\n":
+                                text_parts.append(t)
+                    raw_text = " ".join(text_parts)
+                    if raw_text.strip():
+                        return clean_transcript_text(raw_text)
+
+            # Fallback to plain vtt/srv format if json3 not available
+            fmt = next((item for item in sub_track if "url" in item), None)
+            if fmt and "url" in fmt:
+                req = urllib.request.Request(fmt["url"], headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as resp:
+                    content = resp.read().decode("utf-8", errors="ignore")
+                    # Basic strip of WebVTT metadata / timestamps
+                    content = re.sub(r"WEBVTT.*?\n", "", content)
+                    content = re.sub(r"\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}.*", "", content)
+                    content = re.sub(r"<.*?>", "", content)
+                    if content.strip():
+                        return clean_transcript_text(content)
+
+            raise TranscriptUnavailableError(f"Could not parse subtitles for video {video_id} from yt-dlp tracks.")
+    except Exception as exc:
+        raise TranscriptUnavailableError(f"yt-dlp subtitle fallback failed for video {video_id}: {exc}") from exc
+
+
 def fetch_transcript_text(
     video_id: str,
     languages: list[str] | None = None,
     skip_short: bool = False,
 ) -> str:
     """Returns the transcript as one clean string of plain text."""
+    # First, try fetching directly using youtube_transcript_api
     try:
         langs = languages or ["en"]
         fetched = YouTubeTranscriptApi().fetch(video_id, languages=langs)
+
+        total_duration = sum(getattr(snippet, "duration", 0) for snippet in fetched)
+        if skip_short and total_duration > 0 and total_duration < 180:
+            raise TranscriptUnavailableError(
+                f"Video {video_id} is shorter than 3 minutes ({int(total_duration)}s) and was skipped."
+            )
+
+        raw = " ".join(snippet.text for snippet in fetched)
+        return clean_transcript_text(raw)
+
+    except TranscriptUnavailableError:
+        raise
     except (TranscriptsDisabled, NoTranscriptFound) as exc:
         if languages:
             raise TranscriptUnavailableError(
                 f"No transcript available for video {video_id} in languages {languages}"
             ) from exc
-        # Try to fallback to any available transcript (e.g. auto-generated or other language)
+        # Check fallback language list via youtube_transcript_api
         try:
             transcript_list = YouTubeTranscriptApi().list(video_id)
             first_transcript = next(iter(transcript_list))
             fetched = first_transcript.fetch()
-        except Exception as fallback_exc:
-            raise TranscriptUnavailableError(
-                f"No transcript available for video {video_id}"
-            ) from fallback_exc
-    except Exception as exc:  # noqa: BLE001 - network/IP-block/etc. from the library
+            raw = " ".join(snippet.text for snippet in fetched)
+            return clean_transcript_text(raw)
+        except Exception:
+            pass
+    except Exception:
+        # On IP block or other youtube-transcript-api network failures, fall back to yt-dlp
+        pass
+
+    # Try yt-dlp subtitle extraction fallback
+    try:
+        return fetch_transcript_text_ytdlp(video_id)
+    except TranscriptUnavailableError:
+        raise
+    except Exception as exc:
         raise TranscriptUnavailableError(
-            f"Could not fetch transcript for video {video_id}: {exc}"
+            f"Could not retrieve transcript for video {video_id}: {exc}"
         ) from exc
 
     # Check total video duration if skip_short is set

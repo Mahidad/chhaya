@@ -74,7 +74,7 @@ def recompute_preference_profile(db: psycopg.Connection, *, user_id: str) -> Non
                 COUNT(sg.id) AS usage_count
             FROM teacher_profiles tp
             LEFT JOIN study_guides sg ON sg.teacher_profile_id = tp.id
-            WHERE tp.user_id = %s
+            WHERE tp.user_id = %s AND tp.is_saved = TRUE
             GROUP BY tp.id
             """,
             (user_id,),
@@ -82,6 +82,8 @@ def recompute_preference_profile(db: psycopg.Connection, *, user_id: str) -> Non
         rows = cur.fetchall()
 
     if not rows:
+        with db.cursor() as cur:
+            cur.execute("DELETE FROM preference_profiles WHERE user_id = %s", (user_id,))
         return
 
     total_weight = 0.0

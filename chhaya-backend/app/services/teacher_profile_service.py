@@ -53,7 +53,7 @@ def update_profile(
     # formula depends on (see preference_service.py's docstring) -- a
     # pin/unpin should be reflected the moment it happens, not wait for
     # the next source to be added.
-    if "is_favorite" in changes:
+    if "is_favorite" in changes or "is_saved" in changes:
         preference_service.recompute_preference_profile(db, user_id=user_id)
 
     return updated

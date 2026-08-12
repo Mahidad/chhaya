@@ -34,9 +34,10 @@ class TeacherProfileRepository(BaseRepository[TeacherProfile]):
     def list_for_user(
         self, db: psycopg.Connection, *, user_id: str
     ) -> list[TeacherProfile]:
+        """Returns profiles that the student has explicitly saved to their Style Library."""
         with db.cursor(row_factory=dict_row) as cur:
             cur.execute(
-                "SELECT * FROM teacher_profiles WHERE user_id = %s ORDER BY created_at DESC",
+                "SELECT * FROM teacher_profiles WHERE user_id = %s AND is_saved = TRUE ORDER BY created_at DESC",
                 (user_id,),
             )
             return [self._row_to_obj(row) for row in cur.fetchall()]

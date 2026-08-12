@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS teacher_profiles (
     channel_name      TEXT,
     display_name      TEXT        NOT NULL,
     is_favorite       BOOLEAN     NOT NULL DEFAULT FALSE,
+    is_saved          BOOLEAN     NOT NULL DEFAULT FALSE,
     pacing            TEXT,
     vocabulary_level  TEXT,
     analogy_frequency TEXT,

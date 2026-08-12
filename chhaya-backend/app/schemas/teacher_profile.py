@@ -12,6 +12,7 @@ class TeacherProfileOut(BaseModel):
     channel_name: str | None = None
     display_name: str
     is_favorite: bool
+    is_saved: bool = False
     pacing: str | None
     vocabulary_level: str | None
     analogy_frequency: str | None
@@ -24,7 +25,8 @@ class TeacherProfileOut(BaseModel):
     match_score: float | None = None
 
 class TeacherProfileUpdate(BaseModel):
-    """Used by the Style Library (Module 2, Mahidad F2) to rename / favorite
+    """Used by the Style Library (Module 2, Mahidad F2) to rename / favorite / save
     a profile -- included now since the model already supports it."""
     display_name: str | None = None
     is_favorite: bool | None = None
+    is_saved: bool | None = None

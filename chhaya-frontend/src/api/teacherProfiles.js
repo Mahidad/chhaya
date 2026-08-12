@@ -16,3 +16,8 @@ export async function updateTeacherProfile(id, changes) {
 export async function deleteTeacherProfile(id) {
   await client.delete(`/teacher-profiles/${id}`);
 }
+
+export async function getPreferenceProfile() {
+  const { data } = await client.get("/teacher-profiles/preference");
+  return data;
+}

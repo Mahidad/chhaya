@@ -5,7 +5,8 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
 import AnalysingPanel from "../../components/reference-sources/AnalysingPanel";
-import { getReferenceSource, getSourceProfiles } from "../../api/referenceSources";
+import { getReferenceSource, getSourceProfiles, deleteReferenceSource, renameReferenceSource } from "../../api/referenceSources";
+import { updateTeacherProfile } from "../../api/teacherProfiles";
 
 // Categorical backend values -> an approximate meter fill. The backend
 // reports levels ("slow"/"moderate"/"fast"), not fabricated decimal
@@ -25,6 +26,7 @@ export default function SourceDetailPage() {
   const [profiles, setProfiles] = useState(null); // array now -- a playlist can produce more than one
   const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [profileError, setProfileError] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function handleDelete() {
     if (window.confirm("Are you sure you want to remove this reference source?")) {
@@ -38,6 +40,22 @@ export default function SourceDetailPage() {
     if (newTitle && newTitle.trim() !== "") {
       const updated = await renameReferenceSource(id, newTitle.trim());
       setSource(updated);
+    }
+  }
+
+  async function handleSaveToLibrary() {
+    const targetProfile = profiles?.find((p) => p.id === selectedProfileId) || profiles?.[0];
+    if (!targetProfile) return;
+    setSaving(true);
+    try {
+      const updated = await updateTeacherProfile(targetProfile.id, { is_saved: true });
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === updated.id ? { ...p, is_saved: true } : p))
+      );
+    } catch (err) {
+      console.error("Failed to save style profile to library:", err);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -150,9 +168,20 @@ export default function SourceDetailPage() {
         <div className="page-actions">
           <Button variant="ghost" onClick={handleRename}>Rename</Button>
           <Button variant="danger" onClick={handleDelete}>Delete</Button>
-          <Button variant="primary" icon={<Icon name="check" size={16} strokeWidth="2.4" />} onClick={() => navigate("/library")}>
-            Save to style library
-          </Button>
+          {profile?.is_saved ? (
+            <Button variant="ghost" disabled icon={<Icon name="check" size={16} strokeWidth="2.4" />}>
+              Saved to style library
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              icon={<Icon name="check" size={16} strokeWidth="2.4" />}
+              onClick={handleSaveToLibrary}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save to style library"}
+            </Button>
+          )}
         </div>
       </div>
 
