@@ -5,12 +5,12 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Icon from "../../components/icons/Icon";
 import AnalysingPanel from "../../components/reference-sources/AnalysingPanel";
-import { getReferenceSource, getSourceProfile, deleteReferenceSource, renameReferenceSource } from "../../api/referenceSources";
+import { getReferenceSource, getSourceProfiles } from "../../api/referenceSources";
 
 // Categorical backend values -> an approximate meter fill. The backend
-// reports levels ("slow"/"moderate"/"fast"), not the mockup's fabricated
-// decimal scores ("3.5/10") -- we're not going to invent false precision
-// the model didn't actually produce.
+// reports levels ("slow"/"moderate"/"fast"), not fabricated decimal
+// scores -- we're not going to invent false precision the model didn't
+// actually produce.
 const LEVEL_TO_PERCENT = {
   low: 30, slow: 30, beginner: 30,
   medium: 60, moderate: 60, intermediate: 60,
@@ -22,7 +22,8 @@ export default function SourceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [source, setSource] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [profiles, setProfiles] = useState(null); // array now -- a playlist can produce more than one
+  const [selectedProfileId, setSelectedProfileId] = useState(null);
   const [profileError, setProfileError] = useState(false);
 
   async function handleDelete() {
@@ -45,7 +46,9 @@ export default function SourceDetailPage() {
     setSource(data);
     if (data.status === "ready") {
       try {
-        setProfile(await getSourceProfile(id));
+        const list = await getSourceProfiles(id);
+        setProfiles(list);
+        setSelectedProfileId((current) => current || list[0]?.id || null);
       } catch {
         setProfileError(true);
       }
@@ -85,7 +88,11 @@ export default function SourceDetailPage() {
         <div className="page-head">
           <div>
             <div className="page-title">Reading {source.title}</div>
-            <div className="page-sub">Keep this tab open, it runs in the background too.</div>
+            <div className="page-sub">
+              {source.source_type === "youtube_playlist"
+                ? "Grouping videos by instructor and building a style profile per teacher."
+                : "Keep this tab open, it runs in the background too."}
+            </div>
           </div>
         </div>
         <AnalysingPanel title="Building the style profile" subtitle="This usually takes under a minute" />
@@ -126,13 +133,19 @@ export default function SourceDetailPage() {
   }
 
   // status === "ready"
+  const profile = profiles?.find((p) => p.id === selectedProfileId) || null;
   const style = profile?.raw_style_profile || {};
+  const hasMultipleProfiles = profiles?.length > 1;
+
   return (
     <AppShell section="Reference sources" current="Style profile">
       <div className="page-head">
         <div>
           <div className="page-title">Style profile ready</div>
-          <div className="page-sub">{source.videos[0]?.title || source.title}</div>
+          <div className="page-sub">
+            {source.title}
+            {profiles && ` · ${profiles.length} teaching style${profiles.length === 1 ? "" : "s"} detected`}
+          </div>
         </div>
         <div className="page-actions">
           <Button variant="ghost" onClick={handleRename}>Rename</Button>
@@ -142,6 +155,36 @@ export default function SourceDetailPage() {
           </Button>
         </div>
       </div>
+
+      {hasMultipleProfiles && (
+        <div className="banner">
+          <Icon name="sources" size={20} />
+          <div>
+            <div className="banner-title">This playlist has more than one instructor</div>
+            <div className="banner-copy">
+              Chhaya grouped the videos by channel and built a separate style profile for each. Pick one below.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasMultipleProfiles && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {profiles.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`chip ${p.id === selectedProfileId ? "chip-on" : ""}`}
+              onClick={() => setSelectedProfileId(p.id)}
+            >
+              {p.channel_name || p.display_name}
+              {p.match_score != null && (
+                <span style={{ marginLeft: 6, opacity: 0.75 }}>· {Math.round(p.match_score)}%</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {profileError ? (
         <div className="hint">Profile details couldn't be loaded — try refreshing.</div>
@@ -153,12 +196,19 @@ export default function SourceDetailPage() {
             <div className="id-card">
               <div className="id-shadow">
                 <div className="ghost" />
-                <div className="avatar avatar-lg">{source.title.slice(0, 2).toUpperCase()}</div>
+                <div className="avatar avatar-lg">{profile.display_name.slice(0, 2).toUpperCase()}</div>
               </div>
               <div>
                 <div className="id-name">{profile.display_name}</div>
-                <div className="id-meta">{source.videos.length} video ingested</div>
+                <div className="id-meta">
+                  {source.videos.filter((v) => v.teacher_profile_id === profile.id).length} video(s) from this instructor
+                </div>
                 <div className="id-tags">
+                  {profile.match_score != null && (
+                    <Badge variant={profile.match_score >= 75 ? "ok" : profile.match_score >= 50 ? "amber" : "danger"}>
+                      {Math.round(profile.match_score)}% match with your preference
+                    </Badge>
+                  )}
                   {profile.analogy_frequency === "high" && <Badge variant="primary">Analogy-heavy</Badge>}
                   {profile.vocabulary_level && <Badge variant="iris">{profile.vocabulary_level} vocabulary</Badge>}
                   {style._mock && <Badge variant="amber">Mock profile — add GEMINI_API_KEY for real analysis</Badge>}

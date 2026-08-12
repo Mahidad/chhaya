@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Card } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { TextField } from "../../components/ui/Field";
+import { TextField, PasswordField } from "../../components/ui/Field";
 import logoWhite from "../../assets/logo-white.png";
 
 /*
@@ -60,9 +60,8 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <TextField
+            <PasswordField
               label="Password"
-              type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

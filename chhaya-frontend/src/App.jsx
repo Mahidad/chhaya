@@ -20,6 +20,11 @@ import CreateLikelyQuestionsPage from "./pages/likely-questions/CreateLikelyQues
 import LikelyQuestionsDetailPage from "./pages/likely-questions/LikelyQuestionsDetailPage";
 import AnalyticsDashboardPage from "./pages/progress/AnalyticsDashboardPage";
 import ReviewSchedulePage from "./pages/reviews/ReviewSchedulePage";
+import CoursesListPage from "./pages/courses/CoursesListPage";
+import CourseDetailPage from "./pages/courses/CourseDetailPage";
+import ChapterWorkspacePage from "./pages/courses/ChapterWorkspacePage";
+import NoteViewerPage from "./pages/courses/NoteViewerPage";
+import CodeConverterPage from "./pages/code-converter/CodeConverterPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
 
@@ -56,6 +61,12 @@ export default function App() {
             <Route path="/guides/new" element={<ProtectedRoute><ConfigureGuidePage /></ProtectedRoute>} />
             <Route path="/guides/:id" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
 
+            <Route path="/courses" element={<ProtectedRoute><CoursesListPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId" element={<ProtectedRoute><ChapterWorkspacePage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId/guides/:guideId" element={<ProtectedRoute><GuideDetailPage /></ProtectedRoute>} />
+            <Route path="/courses/:courseId/chapters/:chapterId/notes/:noteId" element={<ProtectedRoute><NoteViewerPage /></ProtectedRoute>} />
+
             <Route path="/exam-papers" element={<ProtectedRoute><ExamPapersListPage /></ProtectedRoute>} />
             <Route path="/exam-papers/new" element={<ProtectedRoute><UploadExamPaperPage /></ProtectedRoute>} />
             <Route path="/exam-papers/:id" element={<ProtectedRoute><ExamPaperDetailPage /></ProtectedRoute>} />
@@ -63,6 +74,7 @@ export default function App() {
             <Route path="/likely-questions/new" element={<ProtectedRoute><CreateLikelyQuestionsPage /></ProtectedRoute>} />
             <Route path="/likely-questions/:id" element={<ProtectedRoute><LikelyQuestionsDetailPage /></ProtectedRoute>} />
 
+            <Route path="/code-converter" element={<ProtectedRoute><CodeConverterPage /></ProtectedRoute>} />
             <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 

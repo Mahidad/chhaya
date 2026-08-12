@@ -9,7 +9,9 @@ class ReferenceSourceCreate(BaseModel):
     source_type: str  # "youtube_video" | "youtube_playlist" | "course_link"
     url: str
     skip_short: bool = False
-
+    # Set to true to re-submit a link the duplicate check already warned
+    # about. See DuplicateSourceError in app/utils/exceptions.py.
+    force: bool = False
 
 class ReferenceSourceUpdate(BaseModel):
     """Payload for renaming a reference source."""
@@ -21,10 +23,11 @@ class VideoOut(BaseModel):
 
     id: str
     title: str
+    channel_name: str | None = None
+    teacher_profile_id: str | None = None
     order_index: int
     duration_seconds: int | None
     transcript_status: str
-
 
 class ReferenceSourceOut(BaseModel):
     """Used for both the list view and the polled detail view -- the

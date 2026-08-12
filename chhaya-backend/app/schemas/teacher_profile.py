@@ -9,6 +9,7 @@ class TeacherProfileOut(BaseModel):
 
     id: str
     source_id: str
+    channel_name: str | None = None
     display_name: str
     is_favorite: bool
     pacing: str | None
@@ -17,7 +18,10 @@ class TeacherProfileOut(BaseModel):
     example_density: str | None
     raw_style_profile: dict[str, Any] | None
     created_at: datetime
-
+    # Not a DB column -- computed fresh against the user's preference
+    # profile at request time by preference_service.compute_match_score.
+    # None when the user has no preference profile yet (empty library).
+    match_score: float | None = None
 
 class TeacherProfileUpdate(BaseModel):
     """Used by the Style Library (Module 2, Mahidad F2) to rename / favorite

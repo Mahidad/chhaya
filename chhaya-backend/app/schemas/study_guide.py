@@ -8,10 +8,14 @@ class StudyGuideCreate(BaseModel):
     depth: str = "standard"  # "quick" | "standard" | "deep"
     include_formula_sheet: bool = False
     include_bangla: bool = False
+    chapter_id: str | None = None
 
 
 class StudyGuideUpdate(BaseModel):
-    topic: str
+    topic: str | None = None
+    chapter_id: str | None = None
+    content: str | None = None
+    formula_sheet_content: str | None = None
 
 
 class StudyGuideOut(BaseModel):
@@ -28,4 +32,5 @@ class StudyGuideOut(BaseModel):
     content: str | None
     formula_sheet_content: str | None
     bangla_content: str | None
+    chapter_id: str | None = None
     created_at: datetime

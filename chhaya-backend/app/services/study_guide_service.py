@@ -11,6 +11,7 @@ from app.models.study_guide import StudyGuide, GuideStatus
 from app.repositories.study_guide_repository import study_guide_repository
 from app.repositories.teacher_profile_repository import teacher_profile_repository
 from app.schemas.study_guide import StudyGuideCreate
+from app.services import preference_service
 from app.services.guide_generation_service import generate_guide_text, generate_formula_sheet, generate_bangla_translation
 from app.utils.exceptions import NotFoundError
 
@@ -56,6 +57,13 @@ def create_and_generate(
             updates["bangla_content"] = generate_bangla_translation(text=content)
 
         guide = study_guide_repository.update(db, db_obj=guide, obj_in=updates)
+        # Generating a guide from a profile is a *usage* signal -- one of
+        # the two inputs Mahidad's preference-profile weighting depends on
+        # (see preference_service.py). Recomputed here, not just when a
+        # new source is added, so "most-used teacher profile" stays
+        # accurate the moment it changes rather than waiting on an
+        # unrelated trigger elsewhere in the app.
+        preference_service.recompute_preference_profile(db, user_id=user_id)
     except Exception as exc:  # noqa: BLE001
         guide = study_guide_repository.update(
             db,
@@ -86,8 +94,25 @@ def delete_guide(db: psycopg.Connection, *, user_id: str, guide_id: str) -> None
     study_guide_repository.delete(db, id=guide.id)
 
 
-def rename_guide(
-    db: psycopg.Connection, *, user_id: str, guide_id: str, topic: str
+def update_guide(
+    db: psycopg.Connection, *, user_id: str, guide_id: str,
+    topic: str | None = None, chapter_id: str | None = None,
+    content: str | None = None, formula_sheet_content: str | None = None,
 ) -> StudyGuide:
+    """
+    Update a study guide's topic, chapter_id, content, or formula_sheet_content.
+    To *unfile* a guide (remove it from any chapter), send chapter_id="NONE".
+    """
     guide = get_guide_for_user(db, user_id=user_id, guide_id=guide_id)
-    return study_guide_repository.update(db, db_obj=guide, obj_in={"topic": topic})
+    updates: dict = {}
+    if topic is not None:
+        updates["topic"] = topic
+    if chapter_id is not None:
+        updates["chapter_id"] = None if chapter_id == "NONE" else chapter_id
+    if content is not None:
+        updates["content"] = content
+    if formula_sheet_content is not None:
+        updates["formula_sheet_content"] = formula_sheet_content
+    if not updates:
+        return guide
+    return study_guide_repository.update(db, db_obj=guide, obj_in=updates)

@@ -7,8 +7,8 @@ from app.models.user import User
 from app.repositories.teacher_profile_repository import teacher_profile_repository
 from app.schemas.reference_source import ReferenceSourceCreate, ReferenceSourceOut, ReferenceSourceUpdate
 from app.schemas.teacher_profile import TeacherProfileOut
-from app.services import reference_source_service
-from app.utils.exceptions import NotFoundError
+from app.services import preference_service, reference_source_service
+from app.utils.exceptions import NotFoundError, DuplicateSourceError
 
 router = APIRouter(prefix="/reference-sources", tags=["reference-sources"])
 
@@ -23,10 +23,24 @@ def create_reference_source(
     Runs ingestion synchronously for now (see the docstring in
     reference_source_service.create_and_process for why, and what to
     change when this needs to move to a background task).
+
+    If this link (or, for a single video, this exact video) was already
+    extracted by this user and `payload.force` isn't set, this returns
+    409 instead of creating anything -- see DuplicateSourceError.
     """
-    return reference_source_service.create_and_process(
-        db, user_id=current_user.id, payload=payload
-    )
+    try:
+        return reference_source_service.create_and_process(
+            db, user_id=current_user.id, payload=payload
+        )
+    except DuplicateSourceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": str(exc),
+                "existing_source_id": exc.existing_source_id,
+                "existing_title": exc.existing_title,
+            },
+        )
 
 
 @router.get("", response_model=list[ReferenceSourceOut])
@@ -53,19 +67,28 @@ def get_reference_source(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
-@router.get("/{source_id}/profile", response_model=TeacherProfileOut)
-def get_source_profile(
+@router.get("/{source_id}/profiles", response_model=list[TeacherProfileOut])
+def get_source_profiles(
     source_id: str,
     db: psycopg.Connection = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Only meaningful once the source's `status` is "ready" -- the frontend
-    calls this right after it sees that status flip, rather than polling
-    it separately. 404s until the profile exists, which naturally covers
-    both "still processing" and "processing failed".
+    PLURAL -- a playlist source can produce more than one profile, one
+    per detected instructor (see reference_source_service.py). A single
+    video source will always return a list of exactly one. Only
+    meaningful once the source's `status` is "ready"; returns an empty
+    list otherwise rather than 404ing.
+
+    Each profile includes `match_score` against the student's preference
+    profile -- this is the actual answer to "which of these candidate
+    videos/playlists is closest to what I usually like": ingest a few
+    candidates on the same topic, open each one's detail page, and
+    compare the match scores instead of guessing from the title alone.
+
+    Replaces the old singular GET /{source_id}/profile endpoint -- update
+    any frontend caller still using the singular path.
     """
-    # Confirms the source belongs to this user before leaking profile data.
     try:
         reference_source_service.get_source_for_user(
             db, user_id=current_user.id, source_id=source_id
@@ -73,13 +96,14 @@ def get_source_profile(
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
-    profile = teacher_profile_repository.get_by_source(db, source_id=source_id)
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No style profile yet for this source.",
-        )
-    return profile
+    profiles = teacher_profile_repository.list_by_source(db, source_id=source_id)
+    preference = preference_service.get_preference_profile(db, user_id=current_user.id)
+    if preference is None:
+        return [TeacherProfileOut(**p.__dict__, match_score=None) for p in profiles]
+    return [
+        TeacherProfileOut(**p.__dict__, match_score=preference_service.compute_match_score(preference, p))
+        for p in profiles
+    ]
 
 
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -94,8 +118,7 @@ def delete_reference_source(
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
-
-
+        
 @router.patch("/{source_id}", response_model=ReferenceSourceOut)
 def rename_reference_source(
     source_id: str,

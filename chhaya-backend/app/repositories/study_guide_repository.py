@@ -29,5 +29,15 @@ class StudyGuideRepository(BaseRepository[StudyGuide]):
             )
             return self._row_to_obj(cur.fetchone())
 
+    def list_for_chapter(
+        self, db: psycopg.Connection, *, chapter_id: str, user_id: str
+    ) -> list[StudyGuide]:
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM study_guides WHERE chapter_id = %s AND user_id = %s ORDER BY created_at DESC",
+                (chapter_id, user_id),
+            )
+            return [self._row_to_obj(row) for row in cur.fetchall()]
+
 
 study_guide_repository = StudyGuideRepository()

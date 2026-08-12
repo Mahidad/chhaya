@@ -37,3 +37,4 @@ class StudyGuide:
     content: str | None = None
     formula_sheet_content: str | None = None
     bangla_content: str | None = None
+    chapter_id: str | None = None
