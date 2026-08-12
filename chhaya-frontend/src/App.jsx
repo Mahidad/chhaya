@@ -19,6 +19,7 @@ import LikelyQuestionsListPage from "./pages/likely-questions/LikelyQuestionsLis
 import CreateLikelyQuestionsPage from "./pages/likely-questions/CreateLikelyQuestionsPage";
 import LikelyQuestionsDetailPage from "./pages/likely-questions/LikelyQuestionsDetailPage";
 import AnalyticsDashboardPage from "./pages/progress/AnalyticsDashboardPage";
+import ReviewSchedulePage from "./pages/reviews/ReviewSchedulePage";
 import CoursesListPage from "./pages/courses/CoursesListPage";
 import CourseDetailPage from "./pages/courses/CourseDetailPage";
 import ChapterWorkspacePage from "./pages/courses/ChapterWorkspacePage";
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/signup" element={<SignupPage />} />
 
             <Route path="/" element={<ProtectedRoute><AnalyticsDashboardPage /></ProtectedRoute>} />
+            <Route path="/reviews" element={<ProtectedRoute><ReviewSchedulePage /></ProtectedRoute>} />
 
             <Route path="/sources" element={<ProtectedRoute><ReferenceSourcesListPage /></ProtectedRoute>} />
             <Route path="/sources/new" element={<ProtectedRoute><AddSourcePage /></ProtectedRoute>} />

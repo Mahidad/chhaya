@@ -104,9 +104,10 @@ def record_study_guide_view(
     Called silently (fire-and-forget) by GuideDetailPage.jsx when a student
     opens a completed study guide. Powers the "guide views" chart and trends.
     """
-    return analytics_service.record_guide_view(
+    view = analytics_service.record_guide_view(
         db, user_id=current_user.id, study_guide_id=payload.study_guide_id
     )
+    return view
 
 
 # ── Analytics read endpoints ──────────────────────────────────────────────────
