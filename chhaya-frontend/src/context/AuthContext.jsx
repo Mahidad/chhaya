@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import * as authApi from "../api/auth";
+import { checkReviewReminders } from "../api/reviewSchedules";
 
 /*
   Holds "who's logged in" in one place so any component can ask via
@@ -26,6 +27,8 @@ export function AuthProvider({ children }) {
       const me = await authApi.fetchMe();
       localStorage.setItem("chhaya_user", JSON.stringify(me));
       setUser(me);
+      // A reminder failure must never block a successful login.
+      checkReviewReminders().catch(() => {});
       return me;
     } finally {
       setLoading(false);

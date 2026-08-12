@@ -4,7 +4,6 @@ import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import Icon from "../../components/icons/Icon";
 import {
-  checkReviewReminders,
   deleteReview,
   listReviews,
   rateReview,
@@ -52,8 +51,6 @@ export default function ReviewSchedulePage() {
 
   useEffect(() => {
     loadReviews();
-    // This is safe when Resend is not configured: it simply reports skipped reminders.
-    checkReviewReminders().catch(() => { });
   }, []);
 
   async function changeFilter(nextFilter) {
