@@ -34,6 +34,9 @@ class CodeConversion:
     source_code: str | None = None
     problem_statement: str | None = None
     code_style_profile_id: str | None = None
+    folder_id: str | None = None
+    title: str | None = None
+    is_favorite: bool = False
     error_message: str | None = None
     output_code: str | None = None
     mapping: list | None = None

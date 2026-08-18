@@ -1118,6 +1118,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -1328,6 +1329,7 @@
   background: var(--surface);
   cursor: pointer;
   transition: all 0.15s ease-in-out;
+  -webkit-user-select: none;
   user-select: none;
 }
 .pick-row:hover {
@@ -1641,6 +1643,7 @@
   text-align: right;
   padding-right: 12px;
   color: var(--faint);
+  -webkit-user-select: none;
   user-select: none;
 }
 .code-line-text {
@@ -1679,3 +1682,310 @@
   border-bottom-color: var(--primary);
 }
 
+
+/* ---------- Code Studio: folders + saved items ---------- */
+.studio-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.folder-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+}
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.folder-item:hover {
+  background: var(--canvas);
+}
+.folder-item-on {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+.folder-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+}
+.studio-main {
+  flex: 1;
+  min-width: 0;
+}
+.saved-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  font-size: 13px;
+}
+.saved-item-row:hover {
+  background: var(--canvas);
+}
+.saved-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-item-meta {
+  font-size: 11px;
+  color: var(--faint);
+  flex-shrink: 0;
+}
+
+/* ---------- Code Studio: output pane save controls ---------- */
+.save-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--canvas);
+  flex-wrap: wrap;
+}
+.save-title-input {
+  flex: 1;
+  min-width: 140px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+/* ---------- Code Studio: Visualizer stepper ---------- */
+.stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.stepper-count {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 4px;
+}
+.var-watch {
+  border-top: 1px solid var(--line-soft);
+  padding: 12px 14px;
+}
+.var-watch-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+.var-watch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.var-watch-cell {
+  background: var(--canvas);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  padding: 6px 10px;
+}
+.var-watch-name {
+  font-size: 10px;
+  color: var(--faint);
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+.var-watch-value {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+/* ---------- Code Studio: Practice ---------- */
+.practice-setup {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+.problem-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.problem-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.problem-card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.problem-reason {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.diff-easy { background: var(--ok-soft); color: var(--ok); }
+.diff-medium { background: var(--amber-soft); color: var(--amber); }
+.diff-hard { background: var(--danger-soft); color: var(--danger); }
+
+/*
+  LeetCode-style rendering for problem descriptions. The imported dataset
+  keeps the original HTML (<pre>, <code>, <ul>), so these rules make
+  examples and inline code read the way a student expects from a problem
+  statement, rather than as unstyled runs of text.
+*/
+.problem-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+.problem-content p { margin-bottom: 10px; }
+.problem-content pre {
+  background: var(--canvas);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 10px 0;
+  white-space: pre-wrap;
+}
+.problem-content code {
+  background: var(--canvas);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  color: var(--plum);
+}
+.problem-content pre code {
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+}
+.problem-content ul, .problem-content ol {
+  margin: 10px 0 10px 20px;
+}
+.problem-content li { margin-bottom: 4px; }
+.problem-content strong { font-weight: 600; color: var(--ink); }
+
+.timer-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+}
+.timer-value {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.verdict-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.verdict-ok { background: var(--ok-soft); border: 1px solid #bfe3cd; }
+.verdict-bad { background: var(--danger-soft); border: 1px solid #f0c4bd; }
+.verdict-title { font-size: 14px; font-weight: 700; }
+.verdict-body { font-size: 12px; margin-top: 4px; line-height: 1.6; }
+.complexity-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Code Studio: Dashboard ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 4px;
+}
+.chart-box {
+  padding: 16px;
+}
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 130px;
+  margin-top: 10px;
+}
+.bar-col {
+  flex: 1;
+  background: var(--primary-soft);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  position: relative;
+}
+.bar-col-filled { background: var(--primary); }
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--faint);
+  margin-top: 6px;
+}
+.line-chart-wrap { margin-top: 10px; }
+.rank-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+}
+.rank-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}

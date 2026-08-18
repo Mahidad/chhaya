@@ -97,6 +97,9 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  folder: (
+    <path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+  ),
   code: (
     <>
       <path d="M9 8l-5 4 5 4" />

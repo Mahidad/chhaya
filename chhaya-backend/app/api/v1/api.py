@@ -11,6 +11,9 @@ from app.api.v1.endpoints import (
     teacher_profiles,
     code_style_profiles, 
     code_conversions,
+    code_visualizations,
+    code_workspace_folders,
+    practice,
     study_guides,
     exam_papers,
     likely_questions,
@@ -28,6 +31,9 @@ api_router.include_router(reference_sources.router)
 api_router.include_router(teacher_profiles.router)
 api_router.include_router(code_style_profiles.router)
 api_router.include_router(code_conversions.router)
+api_router.include_router(code_visualizations.router)
+api_router.include_router(code_workspace_folders.router)
+api_router.include_router(practice.router)
 api_router.include_router(study_guides.router)
 api_router.include_router(exam_papers.router)
 api_router.include_router(likely_questions.router)

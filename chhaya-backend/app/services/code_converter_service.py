@@ -22,7 +22,7 @@ import psycopg
 from app.models.code_conversion import ConversionMode, ConversionStatus
 from app.repositories.code_conversion_repository import code_conversion_repository
 from app.repositories.code_style_profile_repository import code_style_profile_repository
-from app.schemas.code_conversion import CodeConversionSolveCreate, CodeConversionTranslateCreate
+from app.schemas.code_conversion import CodeConversionSolveCreate, CodeConversionTranslateCreate, CodeConversionUpdate
 from app.services import code_conversion_service
 from app.utils.code_style_analyzer import apply_style
 from app.utils.exceptions import NotFoundError
@@ -57,6 +57,7 @@ def create_and_translate(db: psycopg.Connection, *, user_id: str, payload: CodeC
             "target_language": payload.target_language,
             "source_code": payload.source_code,
             "code_style_profile_id": payload.code_style_profile_id,
+            "folder_id": payload.folder_id,
             "status": ConversionStatus.PENDING,
         },
     )
@@ -107,6 +108,7 @@ def create_and_solve(db: psycopg.Connection, *, user_id: str, payload: CodeConve
             "target_language": payload.target_language,
             "problem_statement": payload.problem_statement,
             "code_style_profile_id": payload.code_style_profile_id,
+            "folder_id": payload.folder_id,
             "status": ConversionStatus.PENDING,
         },
     )
@@ -152,3 +154,17 @@ def get_conversion_for_user(db: psycopg.Connection, *, user_id: str, conversion_
     if not conversion:
         raise NotFoundError("Conversion not found.")
     return conversion
+
+
+def update_conversion(db: psycopg.Connection, *, user_id: str, conversion_id: str, payload: CodeConversionUpdate):
+    """Rename, favorite, or move to a folder -- the storage/organization
+    system, not a re-run. Re-running with different inputs is always a
+    new POST, same as everything else in this app that generates content."""
+    conversion = get_conversion_for_user(db, user_id=user_id, conversion_id=conversion_id)
+    changes = payload.model_dump(exclude_unset=True)
+    return code_conversion_repository.update(db, db_obj=conversion, obj_in=changes)
+
+
+def delete_conversion(db: psycopg.Connection, *, user_id: str, conversion_id: str) -> None:
+    conversion = get_conversion_for_user(db, user_id=user_id, conversion_id=conversion_id)
+    code_conversion_repository.delete(db, id=conversion.id)

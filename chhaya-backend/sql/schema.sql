@@ -168,6 +168,23 @@ CREATE INDEX IF NOT EXISTS idx_code_style_profiles_user_id ON code_style_profile
 -- blocks Gemini returns alongside the code, used for click-to-highlight
 -- on the frontend -- see app/services/code_conversion_service.py.
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- code_workspace_folders
+-- Shared storage/organization system for Code Studio (converter + solver +
+-- visualizer). One flat list of folders per user -- no nesting, on purpose,
+-- to keep "where did I save that" a one-level lookup rather than a file
+-- tree a student has to remember the path through. Both code_conversions
+-- and code_visualizations reference this table via a nullable folder_id;
+-- anything with folder_id = NULL shows up under "Unfiled" in the UI.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS code_workspace_folders (
+    id         TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id    TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name       TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_code_workspace_folders_user_id ON code_workspace_folders (user_id);
+
 CREATE TABLE IF NOT EXISTS code_conversions (
     id                    TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
     user_id               TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -177,6 +194,9 @@ CREATE TABLE IF NOT EXISTS code_conversions (
     source_code           TEXT,
     problem_statement     TEXT,
     code_style_profile_id TEXT        REFERENCES code_style_profiles (id) ON DELETE SET NULL,
+    folder_id             TEXT        REFERENCES code_workspace_folders (id) ON DELETE SET NULL,
+    title                 TEXT,
+    is_favorite           BOOLEAN     NOT NULL DEFAULT FALSE,
     status                TEXT        NOT NULL DEFAULT 'pending',
     error_message         TEXT,
     output_code           TEXT,
@@ -186,6 +206,33 @@ CREATE TABLE IF NOT EXISTS code_conversions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_code_conversions_user_id ON code_conversions (user_id);
+CREATE INDEX IF NOT EXISTS idx_code_conversions_folder_id ON code_conversions (folder_id);
+
+-- ---------------------------------------------------------------------------
+-- code_visualizations
+-- Code Studio's third part: an AI-narrated step-by-step execution trace
+-- (line number + variable values + a short description per step), shown
+-- as a variable-watch table on the frontend. See
+-- app/services/code_visualization_service.py for why this is
+-- AI-simulated rather than a real sandboxed execution, and for how the
+-- prompt is written to keep the trace as accurate as possible despite that.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS code_visualizations (
+    id             TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id        TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    language       TEXT        NOT NULL,
+    source_code    TEXT        NOT NULL,
+    folder_id      TEXT        REFERENCES code_workspace_folders (id) ON DELETE SET NULL,
+    title          TEXT,
+    is_favorite    BOOLEAN     NOT NULL DEFAULT FALSE,
+    status         TEXT        NOT NULL DEFAULT 'pending',
+    error_message  TEXT,
+    trace          JSONB,
+    explanation    TEXT,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_code_visualizations_user_id ON code_visualizations (user_id);
+CREATE INDEX IF NOT EXISTS idx_code_visualizations_folder_id ON code_visualizations (folder_id);
 
 CREATE TABLE IF NOT EXISTS study_guides (
     id                    TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -396,3 +443,58 @@ CREATE INDEX IF NOT EXISTS idx_glossary_entries_chapter_id ON glossary_entries (
 
 -- Module 2 fix -- 2026-08-12: sticky notes removed as a feature.
 DROP TABLE IF EXISTS sticky_notes;
+
+-- ---------------------------------------------------------------------------
+-- practice_problems
+-- The problem bank behind Code Studio's Practice tab. Populated once from
+-- a public LeetCode dataset (see scripts/import_practice_problems.py) --
+-- NOT scraped live from leetcode.com, which their ToS prohibits and which
+-- would make the content someone else's copyrighted material. Because
+-- this is a static import rather than a live mirror, there is deliberately
+-- no periodic sync job and no response cache to maintain: the data doesn't
+-- change under us.
+--
+-- Shared across all users (no user_id) -- this is reference data, not
+-- per-student content.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS practice_problems (
+    id          TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    title       TEXT        NOT NULL,
+    title_slug  TEXT        NOT NULL UNIQUE,
+    difficulty  TEXT        NOT NULL,            -- 'easy' | 'medium' | 'hard'
+    description TEXT        NOT NULL,
+    topic_tags  JSONB,                            -- e.g. ["array", "hash-table"]
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_problems_difficulty ON practice_problems (difficulty);
+CREATE INDEX IF NOT EXISTS idx_practice_problems_title_slug ON practice_problems (title_slug);
+
+-- ---------------------------------------------------------------------------
+-- practice_attempts
+-- One row per problem a student starts. Created on "Start" (which is when
+-- the timer begins -- started_at is the timer's source of truth, not a
+-- frontend counter, so a page refresh can't reset or fake it), then
+-- updated on submit with the student's code and Gemini's verdict.
+-- Feeds the Code Studio dashboard.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS practice_attempts (
+    id                 TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id            TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    problem_id         TEXT        NOT NULL REFERENCES practice_problems (id) ON DELETE CASCADE,
+    folder_id          TEXT        REFERENCES code_workspace_folders (id) ON DELETE SET NULL,
+    language           TEXT,
+    submitted_code     TEXT,
+    status             TEXT        NOT NULL DEFAULT 'in_progress',  -- in_progress | submitted | abandoned
+    is_correct         BOOLEAN,
+    feedback           TEXT,
+    time_complexity    TEXT,       -- Gemini's estimate, e.g. "O(n log n)"
+    space_complexity   TEXT,
+    seconds_taken      INTEGER,
+    started_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    submitted_at       TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON practice_attempts (user_id);
+CREATE INDEX IF NOT EXISTS idx_practice_attempts_problem_id ON practice_attempts (problem_id);
+CREATE INDEX IF NOT EXISTS idx_practice_attempts_started_at ON practice_attempts (started_at);

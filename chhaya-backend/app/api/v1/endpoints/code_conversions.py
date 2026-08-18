@@ -8,6 +8,7 @@ from app.schemas.code_conversion import (
     CodeConversionOut,
     CodeConversionSolveCreate,
     CodeConversionTranslateCreate,
+    CodeConversionUpdate,
 )
 from app.services import code_converter_service
 from app.utils.exceptions import NotFoundError
@@ -62,5 +63,34 @@ def get_conversion(
         return code_converter_service.get_conversion_for_user(
             db, user_id=current_user.id, conversion_id=conversion_id
         )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.patch("/{conversion_id}", response_model=CodeConversionOut)
+def update_conversion(
+    conversion_id: str,
+    payload: CodeConversionUpdate,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Rename, favorite, or file into a folder -- see
+    code_converter_service.update_conversion's docstring."""
+    try:
+        return code_converter_service.update_conversion(
+            db, user_id=current_user.id, conversion_id=conversion_id, payload=payload
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.delete("/{conversion_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_conversion(
+    conversion_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        code_converter_service.delete_conversion(db, user_id=current_user.id, conversion_id=conversion_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
