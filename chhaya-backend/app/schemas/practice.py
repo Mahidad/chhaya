@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PracticeProblemOut(BaseModel):
@@ -21,7 +21,11 @@ class SuggestProblemsRequest(BaseModel):
     are generated, per the feature spec."""
     folder_id: str
     difficulty: str
-    limit: int = 5
+    # 10, not 5: the matcher returns fewer than this whenever the bank has
+    # fewer good matches, so a higher ceiling only ever shows MORE when more
+    # genuinely fit. Bounded so a caller can't ask for the whole bank and
+    # blow out the prompt.
+    limit: int = Field(default=10, ge=1, le=25)
 
 
 class StartAttemptRequest(BaseModel):

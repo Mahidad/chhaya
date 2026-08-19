@@ -15,16 +15,28 @@ from app.utils.exceptions import NotFoundError
 
 
 def create_and_visualize(db: psycopg.Connection, *, user_id: str, payload: CodeVisualizationCreate):
-    visualization = code_visualization_repository.create(
-        db,
-        obj_in={
-            "user_id": user_id,
-            "language": payload.language,
-            "source_code": payload.source_code,
-            "folder_id": payload.folder_id,
-            "status": VisualizationStatus.PENDING,
-        },
+    # Re-tracing the same code refreshes the existing row instead of adding
+    # a duplicate beside it -- see CodeConversionRepository.find_identical
+    # for the full reasoning.
+    existing = code_visualization_repository.find_identical(
+        db, user_id=user_id, language=payload.language, source_code=payload.source_code
     )
+    if existing:
+        changes = {"status": VisualizationStatus.PENDING, "error_message": None}
+        if payload.folder_id:
+            changes["folder_id"] = payload.folder_id
+        visualization = code_visualization_repository.update(db, db_obj=existing, obj_in=changes)
+    else:
+        visualization = code_visualization_repository.create(
+            db,
+            obj_in={
+                "user_id": user_id,
+                "language": payload.language,
+                "source_code": payload.source_code,
+                "folder_id": payload.folder_id,
+                "status": VisualizationStatus.PENDING,
+            },
+        )
 
     try:
         visualization = code_visualization_repository.update(

@@ -263,6 +263,15 @@ CREATE TABLE IF NOT EXISTS code_conversions (
 CREATE INDEX IF NOT EXISTS idx_code_conversions_user_id ON code_conversions (user_id);
 CREATE INDEX IF NOT EXISTS idx_code_conversions_folder_id ON code_conversions (folder_id);
 
+-- Add title/is_favorite to tables created before the folder system existed.
+-- CREATE TABLE IF NOT EXISTS above is a no-op on an existing table, so a
+-- database built before those columns were added never gained them, and
+-- PATCHing a conversion's name failed with "column title does not exist"
+-- while the read path quietly reported title=NULL (the dataclass defaults
+-- it). code_visualizations was created later and already has both.
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ---------------------------------------------------------------------------
 -- code_visualizations
 -- Code Studio's third part: an AI-narrated step-by-step execution trace

@@ -13,7 +13,7 @@ just be another thing that can go stale.
 """
 
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import psycopg
 from psycopg.rows import dict_row
@@ -56,6 +56,17 @@ def get_dashboard(db: psycopg.Connection, *, user_id: str) -> dict:
         )
         rows = cur.fetchall()
 
+        # "Now" has to come from the DATABASE, not datetime.now(timezone.utc).
+        # psycopg returns TIMESTAMPTZ columns in the session's timezone
+        # (Asia/Dhaka here), so a UTC "now" put the day/week buckets in a
+        # different calendar day than the timestamps they were bucketing
+        # against -- at 03:24 in Dhaka it is still the previous day in UTC,
+        # so today's practice landed on a date key the month loop below
+        # never generated and every bar read zero. Taking now() from the
+        # same session guarantees both sides share a timezone.
+        cur.execute("SELECT now()")
+        now = cur.fetchone()["now"]
+
     submitted = [r for r in rows if r["status"] == "submitted"]
     solved = [r for r in submitted if r["is_correct"] is True]
 
@@ -72,18 +83,31 @@ def get_dashboard(db: psycopg.Connection, *, user_id: str) -> dict:
         by_difficulty[r["difficulty"]] += 1
 
     # --- growth: cumulative solves per ISO week, last 12 weeks ---
-    now = datetime.now(timezone.utc)
+    # %G not %Y: %V is the ISO week number and only lines up with the ISO
+    # year. Pairing it with the calendar year mislabels the turn of the
+    # year -- 2027-01-01 is ISO 2026-W53, which %Y-W%V would write as
+    # "2027-W53", a key nothing else ever produces, silently dropping those
+    # solves from the chart.
     weekly = defaultdict(int)
     for r in solved:
         submitted_at = r["submitted_at"] or r["started_at"]
-        week_key = submitted_at.strftime("%Y-W%V")
-        weekly[week_key] += 1
+        weekly[submitted_at.strftime("%G-W%V")] += 1
+
+    # The window shows 12 weeks, but the line is labelled *cumulative*, so
+    # it has to start from everything solved before the window rather than
+    # from zero -- otherwise a long-time user's total appears to reset every
+    # quarter.
+    window_start = now - timedelta(weeks=11)
+    window_start = (window_start - timedelta(days=window_start.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    running_total = sum(
+        1 for r in solved if (r["submitted_at"] or r["started_at"]) < window_start
+    )
 
     growth = []
-    running_total = 0
     for offset in range(11, -1, -1):
-        week_start = now - timedelta(weeks=offset)
-        key = week_start.strftime("%Y-W%V")
+        key = (now - timedelta(weeks=offset)).strftime("%G-W%V")
         running_total += weekly.get(key, 0)
         growth.append({"week": key, "solved_that_week": weekly.get(key, 0), "cumulative": running_total})
 

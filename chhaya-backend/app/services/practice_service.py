@@ -70,23 +70,33 @@ def _folder_work_summary(db: psycopg.Connection, *, user_id: str, folder_id: str
 def suggest_problems(db: psycopg.Connection, *, user_id: str, payload: SuggestProblemsRequest):
     work_summary = _folder_work_summary(db, user_id=user_id, folder_id=payload.folder_id)
 
-    candidates = practice_problem_repository.list_by_difficulty(
-        db, difficulty=payload.difficulty, limit=MATCH_CANDIDATE_POOL
+    # Already-solved problems are excluded in SQL, so this pool is entirely
+    # made of problems the student has not solved correctly yet.
+    candidates = practice_problem_repository.list_unsolved_for_user(
+        db, user_id=user_id, difficulty=payload.difficulty, limit=MATCH_CANDIDATE_POOL
     )
     if not candidates:
+        if practice_problem_repository.list_by_difficulty(db, difficulty=payload.difficulty, limit=1):
+            raise NotFoundError(
+                f"You have already solved every {payload.difficulty} problem in the bank. "
+                "Try a different difficulty."
+            )
         raise NotFoundError(
             f"No {payload.difficulty} problems in the bank yet -- run scripts/import_practice_problems.py first."
         )
-
-    # Don't re-suggest something they've already solved correctly.
-    solved = set(practice_attempt_repository.list_solved_slugs_for_user(db, user_id=user_id))
-    candidates = [c for c in candidates if c.title_slug not in solved] or candidates
 
     picks = practice_ai_service.match_problems(
         work_summary=work_summary, problems=candidates, limit=payload.limit
     )
 
-    slugs = [p["title_slug"] for p in picks if p.get("title_slug")]
+    # Only trust picks that came from the pool we offered. Gemini returns
+    # slugs as free text, so it can echo back one that was never in the
+    # candidate list -- a solved problem it knows from training, or a
+    # plausible-looking slug that doesn't exist. Anything not in the pool is
+    # dropped rather than looked up, which is also what keeps solved
+    # problems from reappearing here.
+    allowed = {c.title_slug for c in candidates}
+    slugs = [p["title_slug"] for p in picks if p.get("title_slug") in allowed][: payload.limit]
     problems = practice_problem_repository.get_many_by_slugs(db, slugs=slugs)
 
     # Preserve Gemini's ordering (get_many_by_slugs returns DB order) and

@@ -66,7 +66,7 @@ export default function PracticePane({ folders }) {
     setError("");
     setLoadingSuggestions(true);
     try {
-      const results = await suggestProblems({ folderId, difficulty, limit: 5 });
+      const results = await suggestProblems({ folderId, difficulty, limit: 10 });
       setSuggestions(results);
     } catch (err) {
       setError(err.response?.data?.detail || "Could not load suggestions.");
