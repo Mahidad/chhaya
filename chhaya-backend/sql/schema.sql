@@ -261,6 +261,12 @@ CREATE TABLE IF NOT EXISTS code_conversions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_code_conversions_user_id ON code_conversions (user_id);
+
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS code_style_profile_id TEXT REFERENCES code_style_profiles (id) ON DELETE SET NULL;
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS folder_id TEXT REFERENCES code_workspace_folders (id) ON DELETE SET NULL;
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE INDEX IF NOT EXISTS idx_code_conversions_folder_id ON code_conversions (folder_id);
 
 -- ---------------------------------------------------------------------------
@@ -287,6 +293,11 @@ CREATE TABLE IF NOT EXISTS code_visualizations (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_code_visualizations_user_id ON code_visualizations (user_id);
+
+ALTER TABLE code_visualizations ADD COLUMN IF NOT EXISTS folder_id TEXT REFERENCES code_workspace_folders (id) ON DELETE SET NULL;
+ALTER TABLE code_visualizations ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE code_visualizations ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE INDEX IF NOT EXISTS idx_code_visualizations_folder_id ON code_visualizations (folder_id);
 
 CREATE TABLE IF NOT EXISTS study_guides (
@@ -553,6 +564,8 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON practice_attempts (user_id);
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_problem_id ON practice_attempts (problem_id);
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_started_at ON practice_attempts (started_at);
+
+ALTER TABLE practice_attempts ADD COLUMN IF NOT EXISTS folder_id TEXT REFERENCES code_workspace_folders (id) ON DELETE SET NULL;
 -- ---------------------------------------------------------------------------
 -- quizzes  (Module 3 Feature 7 – Amiyo)
 -- One row per quiz a student generates. Linked to a chapter (which acts as
