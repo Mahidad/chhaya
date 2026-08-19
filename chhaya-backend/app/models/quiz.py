@@ -21,6 +21,13 @@ class Quiz:
     ends_at: datetime | None = None
     submitted_at: datetime | None = None
     created_at: datetime | None = None
+    # Feature 8 grading fields
+    total_score: int | None = None
+    max_score: int | None = None
+    percentage: float | None = None
+    pass_status: str | None = None
+    graded_answers: list | None = None
+    graded_at: datetime | None = None
 
 
 @dataclass
