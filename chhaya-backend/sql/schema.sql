@@ -498,6 +498,49 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON practice_attempts (user_id);
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_problem_id ON practice_attempts (problem_id);
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_started_at ON practice_attempts (started_at);
+
+-- ---------------------------------------------------------------------------
+-- quizzes  (Module 3 Feature 7 – Amiyo)
+-- One row per quiz a student generates. Linked to a chapter (which acts as
+-- the topic). attempt_number tracks retakes so Feature 8 can show history.
+-- answers is a JSONB list of {question_id, answer_text} written on submit.
+-- status flow: not_started → in_progress → submitted | auto_submitted
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS quizzes (
+    id                 TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id            TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id         TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
+    title              TEXT        NOT NULL,
+    difficulty         TEXT        NOT NULL,
+    num_questions      INTEGER     NOT NULL,
+    marks_per_question INTEGER     NOT NULL,
+    duration_minutes   INTEGER     NOT NULL,
+    attempt_number     INTEGER     NOT NULL DEFAULT 1,
+    status             TEXT        NOT NULL DEFAULT 'not_started',
+    answers            JSONB,
+    started_at         TIMESTAMPTZ,
+    ends_at            TIMESTAMPTZ,
+    submitted_at       TIMESTAMPTZ,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_quizzes_user_id ON quizzes (user_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_chapter_id ON quizzes (chapter_id);
+
+-- ---------------------------------------------------------------------------
+-- quiz_questions  (Module 3 Feature 7 – Amiyo)
+-- One row per question Gemini generates for a quiz. Deleted automatically
+-- when the parent quiz is deleted (ON DELETE CASCADE).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS quiz_questions (
+    id            TEXT    PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    quiz_id       TEXT    NOT NULL REFERENCES quizzes (id) ON DELETE CASCADE,
+    question_text TEXT    NOT NULL,
+    marks         INTEGER NOT NULL,
+    difficulty    TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz_id ON quiz_questions (quiz_id);
 -- ===========================================================================
 -- Module 3, Lamia -- Feature 1 (Voice Narration) + Feature 2 (Concept Map Game)
 --

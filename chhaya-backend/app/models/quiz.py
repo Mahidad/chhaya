@@ -1,0 +1,32 @@
+"""Data models for Amiyo's Module 3 Feature 7 – Quiz Generation."""
+
+from dataclasses import dataclass
+from datetime import datetime
+
+
+@dataclass
+class Quiz:
+    id: str
+    user_id: str
+    chapter_id: str
+    title: str
+    difficulty: str
+    num_questions: int
+    marks_per_question: int
+    duration_minutes: int
+    attempt_number: int
+    status: str
+    answers: list | None = None
+    started_at: datetime | None = None
+    ends_at: datetime | None = None
+    submitted_at: datetime | None = None
+    created_at: datetime | None = None
+
+
+@dataclass
+class QuizQuestion:
+    id: str
+    quiz_id: str
+    question_text: str
+    marks: int
+    difficulty: str

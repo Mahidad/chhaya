@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     courses,
     glossary,
     notes,
+    quizzes,
     voice_narrations,
     concept_maps,
 )
@@ -46,5 +47,6 @@ api_router.include_router(courses.router)
 api_router.include_router(courses.chapters_router)
 api_router.include_router(glossary.router)
 api_router.include_router(notes.router)
+api_router.include_router(quizzes.router)
 api_router.include_router(voice_narrations.router)
 api_router.include_router(concept_maps.router)

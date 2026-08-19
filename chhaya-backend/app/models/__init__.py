@@ -11,6 +11,7 @@ from app.models.exam_paper import ExamPaper, ExamPaperStatus
 from app.models.analytics import StudySession, StudyGuideView
 from app.models.likely_question import LikelyQuestionSet, LikelyQuestionStatus
 from app.models.review_schedule import ReviewSchedule
+from app.models.quiz import Quiz, QuizQuestion
 
 __all__ = [
     "User",
@@ -29,4 +30,6 @@ __all__ = [
     "LikelyQuestionSet",
     "LikelyQuestionStatus",
     "ReviewSchedule",
+    "Quiz",
+    "QuizQuestion",
 ]

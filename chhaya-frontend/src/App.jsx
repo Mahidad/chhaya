@@ -28,6 +28,9 @@ import CodeStudioPage from "./pages/code-studio/CodeStudioPage";
 import ConceptMapPage from "./pages/concept-map/ConceptMapPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
+import QuizzesListPage from "./pages/quizzes/QuizzesListPage";
+import GenerateQuizPage from "./pages/quizzes/GenerateQuizPage";
+import QuizSessionPage from "./pages/quizzes/QuizSessionPage";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -76,6 +79,10 @@ export default function App() {
             <Route path="/likely-questions/:id" element={<ProtectedRoute><LikelyQuestionsDetailPage /></ProtectedRoute>} />
 
             <Route path="/code-studio" element={<ProtectedRoute><CodeStudioPage /></ProtectedRoute>} />
+            <Route path="/quizzes" element={<ProtectedRoute><QuizzesListPage /></ProtectedRoute>} />
+            <Route path="/quizzes/new" element={<ProtectedRoute><GenerateQuizPage /></ProtectedRoute>} />
+            <Route path="/quizzes/:quizId" element={<ProtectedRoute><QuizSessionPage /></ProtectedRoute>} />
+            <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
             <Route path="/concept-maps" element={<ProtectedRoute><ConceptMapPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
