@@ -62,6 +62,22 @@ CREATE TABLE IF NOT EXISTS study_group_join_requests (
 CREATE INDEX IF NOT EXISTS idx_study_groups_creator_id ON study_groups (creator_id);
 CREATE INDEX IF NOT EXISTS idx_study_group_invitations_user_id ON study_group_invitations (invited_user_id);
 
+CREATE TABLE IF NOT EXISTS study_group_messages (
+    id         TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    group_id   TEXT        NOT NULL REFERENCES study_groups (id) ON DELETE CASCADE,
+    user_id    TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    content    TEXT        NOT NULL,
+    is_pinned  BOOLEAN     NOT NULL DEFAULT FALSE,
+    pinned_by_user_id TEXT REFERENCES users (id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Needed when this feature is added to an existing database.
+ALTER TABLE study_group_messages
+    ADD COLUMN IF NOT EXISTS pinned_by_user_id TEXT REFERENCES users (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_study_group_messages_group_id ON study_group_messages (group_id);
+
 -- ---------------------------------------------------------------------------
 -- reference_sources
 -- One row = one YouTube video / playlist / course link a student adds.

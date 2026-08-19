@@ -13,6 +13,7 @@ from app.models.likely_question import LikelyQuestionSet, LikelyQuestionStatus
 from app.models.review_schedule import ReviewSchedule
 from app.models.quiz import Quiz, QuizQuestion
 from app.models.study_group import StudyGroup, GroupInvitation, JoinRequest
+from app.models.study_group_message import StudyGroupMessage
 
 __all__ = [
     "User",
@@ -36,4 +37,5 @@ __all__ = [
     "StudyGroup",
     "GroupInvitation",
     "JoinRequest",
+    "StudyGroupMessage",
 ]
