@@ -34,6 +34,7 @@ import QuizResultsPage from "./pages/quizzes/QuizResultsPage";
 import StudyGroupsListPage from "./pages/study-groups/StudyGroupsListPage";
 import CreateStudyGroupPage from "./pages/study-groups/CreateStudyGroupPage";
 import StudyGroupDetailPage from "./pages/study-groups/StudyGroupDetailPage";
+import StudyGroupDiscussionPage from "./pages/study-groups/StudyGroupDiscussionPage";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/study-groups" element={<ProtectedRoute><StudyGroupsListPage /></ProtectedRoute>} />
             <Route path="/study-groups/new" element={<ProtectedRoute><CreateStudyGroupPage /></ProtectedRoute>} />
             <Route path="/study-groups/:id" element={<ProtectedRoute><StudyGroupDetailPage /></ProtectedRoute>} />
+            <Route path="/study-groups/:id/discussion" element={<ProtectedRoute><StudyGroupDiscussionPage /></ProtectedRoute>} />
 
             <Route path="/code-studio" element={<ProtectedRoute><CodeStudioPage /></ProtectedRoute>} />
             <Route path="/quizzes" element={<ProtectedRoute><QuizzesListPage /></ProtectedRoute>} />
