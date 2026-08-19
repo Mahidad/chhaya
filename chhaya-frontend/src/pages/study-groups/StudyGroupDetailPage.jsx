@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import { TextField } from "../../components/ui/Field";
+import GroupDiscussion from "../../components/study-groups/GroupDiscussion";
 import {
   getStudyGroup,
   deleteStudyGroup,
@@ -111,6 +112,7 @@ export default function StudyGroupDetailPage() {
           </div>
         </div>}
       </div>
+      {group.membership_status === "member" && <div style={{ marginTop: 16 }}><GroupDiscussion groupId={id} /></div>}
     </AppShell>
   );
 }
