@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class QuizGenerateIn(BaseModel):
     """What the student sends to kick off quiz generation."""
-    chapter_id: str
+    note_id: str
     num_questions: int = Field(ge=1, le=20)
     min_marks: int = Field(ge=1, le=10)
     max_marks: int = Field(ge=1, le=10)
@@ -31,6 +31,7 @@ class QuizOut(BaseModel):
     """Summary of a quiz — shown on the list page. Includes grading fields (null until graded)."""
     id: str
     chapter_id: str
+    note_id: str | None
     title: str
     difficulty: str
     num_questions: int
@@ -54,6 +55,7 @@ class QuizDetailOut(BaseModel):
     """Full quiz — shown on the session page (includes questions)."""
     id: str
     chapter_id: str
+    note_id: str | None
     title: str
     difficulty: str
     num_questions: int

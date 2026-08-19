@@ -31,21 +31,21 @@ def generate_quiz(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generate a quiz from the student's typed notes for a chapter.
+    Generate a quiz from a single note (text, PDF, or image).
     Returns the quiz header plus all generated questions.
     """
     try:
         quiz, questions = quiz_service.generate_quiz(
             db,
             user_id=current_user.id,
-            chapter_id=payload.chapter_id,
+            note_id=payload.note_id,
             num_questions=payload.num_questions,
             min_marks=payload.min_marks,
             max_marks=payload.max_marks,
             difficulty=payload.difficulty,
         )
     except ValueError as exc:
-        # Raised when notes are too short
+        # Raised when note not found or content too short
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except ExternalServiceError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
@@ -53,6 +53,7 @@ def generate_quiz(
     return QuizDetailOut(
         id=quiz.id,
         chapter_id=quiz.chapter_id,
+        note_id=quiz.note_id,
         title=quiz.title,
         difficulty=quiz.difficulty,
         num_questions=quiz.num_questions,
@@ -75,7 +76,6 @@ def generate_quiz(
         ],
     )
 
-
 @router.get("", response_model=list[QuizOut])
 def list_quizzes(
     db: psycopg.Connection = Depends(get_db),
@@ -87,6 +87,7 @@ def list_quizzes(
         QuizOut(
             id=q.id,
             chapter_id=q.chapter_id,
+            note_id=q.note_id,
             title=q.title,
             difficulty=q.difficulty,
             num_questions=q.num_questions,
@@ -118,6 +119,7 @@ def get_quiz(
     return QuizDetailOut(
         id=quiz.id,
         chapter_id=quiz.chapter_id,
+        note_id=quiz.note_id,
         title=quiz.title,
         difficulty=quiz.difficulty,
         num_questions=quiz.num_questions,
@@ -328,11 +330,11 @@ def retry_quiz(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Create a new quiz attempt for the same chapter and settings.
+    Create a new quiz attempt from the same note and settings as the original.
 
-    Reads chapter_id + settings from the original quiz, then calls
+    Reads note_id + settings from the original quiz, then calls
     the same generation flow as Feature 7. The new quiz gets
-    attempt_number = existing_count + 1. All previous attempts are
+    attempt_number = existing_per_note_count + 1. All previous attempts are
     kept unchanged in the DB so history stays accurate.
     """
     # Load the original quiz to copy its settings
@@ -342,11 +344,17 @@ def retry_quiz(
     if original is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found.")
 
+    if not original.note_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="This quiz has no associated note and cannot be retried."
+        )
+
     try:
         quiz, questions = quiz_service.generate_quiz(
             db,
             user_id=current_user.id,
-            chapter_id=original.chapter_id,
+            note_id=original.note_id,
             num_questions=original.num_questions,
             min_marks=original.min_marks,
             max_marks=original.max_marks,
@@ -360,6 +368,7 @@ def retry_quiz(
     return QuizDetailOut(
         id=quiz.id,
         chapter_id=quiz.chapter_id,
+        note_id=quiz.note_id,
         title=quiz.title,
         difficulty=quiz.difficulty,
         num_questions=quiz.num_questions,
