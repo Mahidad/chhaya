@@ -1989,3 +1989,61 @@
   font-weight: 700;
   color: var(--primary-dark);
 }
+
+/* ---------- Module 3 (Lamia): Narration row ---------- */
+.narration-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--canvas);
+}
+
+/* Module 3 (Lamia) -- Concept Map active-recall game */
+.concept-sentence {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+.concept-blank {
+  display: inline-block;
+  min-width: 90px;
+  padding: 2px 10px;
+  margin: 0 2px;
+  border: 1.5px dashed var(--line);
+  border-radius: 6px;
+  background: var(--canvas);
+  text-align: center;
+  font-weight: 700;
+  color: var(--primary-dark);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.concept-blank-filled {
+  border-style: solid;
+  border-color: var(--ok);
+  background: var(--ok-soft);
+  cursor: default;
+}
+.concept-blank-wrong {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  animation: concept-shake 0.4s;
+}
+
+@keyframes concept-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.concept-card {
+  cursor: grab;
+  user-select: none;
+}
+.concept-card:active {
+  cursor: grabbing;
+}

@@ -24,3 +24,13 @@ yt-dlp>=2024.1   # playlist enumeration - see app/utils/youtube_playlist.py
 pytesseract>=0.3
 Pillow>=10.0
 pdf2image>=1.17.0
+# AI voice narration (Module 3 / Lamia)
+# unofficial, free, no API key -- see app/utils/tts.py for how it's used
+# and what it can/can't do.
+edge-tts>=6.1
+
+# word lookup (Module 2) + concept map extraction (Module 3 / Lamia)
+# NOTE: this was already imported by app/utils/dictionary.py but had
+# never actually been added here -- fixed while touching this file again.
+# after installing, run once: python -m nltk.downloader punkt averaged_perceptron_tagger wordnet
+nltk>=3.8

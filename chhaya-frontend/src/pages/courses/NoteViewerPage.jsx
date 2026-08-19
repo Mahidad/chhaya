@@ -5,6 +5,7 @@ import Button from "../../components/ui/Button";
 import Icon from "../../components/icons/Icon";
 import Badge from "../../components/ui/Badge";
 import AnnotatableText, { HighlightableText } from "../../components/annotations/AnnotatableText";
+import NarrationPanel from "../../components/narration/NarrationPanel";
 import { getNote, updateNote, getNoteFileBlob } from "../../api/notes";
 import { getChapter } from "../../api/courses";
 import { ContentType } from "../../constants/contentTypes";
@@ -106,6 +107,13 @@ export default function NoteViewerPage() {
           </AnnotatableText>
         )}
       </div>
+      {/* Module 3 (Lamia): only text notes have text to narrate --
+          image/pdf notes have nothing for edge-tts to read. */}
+      {note.note_type === "text" && (
+        <div style={{ marginTop: 16 }}>
+          <NarrationPanel contentType={ContentType.NOTE} contentId={note.id} />
+        </div>
+      )}
     </AppShell>
   );
 }

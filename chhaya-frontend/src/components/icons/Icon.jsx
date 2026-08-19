@@ -136,6 +136,12 @@ const PATHS = {
       <path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" />
     </>
   ),
+  volume: (
+    <>
+      <path d="M4 9v6h4l5 4V5L8 9H4z" />
+      <path d="M17.5 8.5a5 5 0 0 1 0 7" />
+    </>
+  ),
   courses: (
     <>
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />

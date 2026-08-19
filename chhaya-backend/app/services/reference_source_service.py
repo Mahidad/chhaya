@@ -51,6 +51,7 @@ from app.schemas.reference_source import ReferenceSourceCreate
 from app.services import preference_service
 from app.services.teaching_style_service import analyze_style
 from app.utils.exceptions import NotFoundError, DuplicateSourceError
+from app.utils.tts import DEFAULT_VOICE
 from app.utils.youtube import extract_video_id, fetch_transcript_text, TranscriptUnavailableError
 from app.utils.youtube_playlist import enumerate_playlist, PlaylistUnavailableError
 
@@ -135,6 +136,8 @@ def _process_single_video(
                 "analogy_frequency": style.get("analogy_frequency"),
                 "example_density": style.get("example_density"),
                 "raw_style_profile": style,
+                "narration_voice": style.get("narration_voice_guess", DEFAULT_VOICE),
+                "narration_voice_is_guess": True,
             },
         )
 
@@ -229,7 +232,7 @@ def _process_playlist(
                 continue  # every video in this group failed -- no profile for this group
 
             combined_text = " ".join(transcript_parts)[:MAX_COMBINED_TRANSCRIPT_CHARS]
-            style = analyze_style(combined_text)
+            style = analyze_style(combined_text, channel_name=channel_name)
 
             profile = teacher_profile_repository.create(
                 db,
@@ -243,6 +246,8 @@ def _process_playlist(
                     "analogy_frequency": style.get("analogy_frequency"),
                     "example_density": style.get("example_density"),
                     "raw_style_profile": style,
+                    "narration_voice": style.get("narration_voice_guess", DEFAULT_VOICE),
+                    "narration_voice_is_guess": True,
                 },
             )
             any_profile_created = True

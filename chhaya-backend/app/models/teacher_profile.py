@@ -26,3 +26,8 @@ class TeacherProfile:
     analogy_frequency: str | None = None
     example_density: str | None = None
     raw_style_profile: dict | None = None
+    # Module 3 (Lamia) -- which edge-tts voice narrations of this
+    # teacher's content use. See sql/schema.sql's comment for the
+    # guess-once/correct-once lifecycle.
+    narration_voice: str = "en-US-AriaNeural"
+    narration_voice_is_guess: bool = True

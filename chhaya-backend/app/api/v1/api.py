@@ -26,6 +26,8 @@ from app.api.v1.endpoints import (
     quizzes,
     study_groups,
     study_group_messages,
+    narrations,
+    concept_maps,
 )
 
 api_router = APIRouter()
@@ -50,3 +52,5 @@ api_router.include_router(notes.router)
 api_router.include_router(quizzes.router)
 api_router.include_router(study_groups.router)
 api_router.include_router(study_group_messages.router)
+api_router.include_router(narrations.router)
+api_router.include_router(concept_maps.router)

@@ -34,6 +34,9 @@ import QuizResultsPage from "./pages/quizzes/QuizResultsPage";
 import StudyGroupsListPage from "./pages/study-groups/StudyGroupsListPage";
 import CreateStudyGroupPage from "./pages/study-groups/CreateStudyGroupPage";
 import StudyGroupDetailPage from "./pages/study-groups/StudyGroupDetailPage";
+import ConceptMapsListPage from "./pages/concept-maps/ConceptMapsListPage";
+import GenerateConceptMapPage from "./pages/concept-maps/GenerateConceptMapPage";
+import ConceptMapGamePage from "./pages/concept-maps/ConceptMapGamePage";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -89,7 +92,9 @@ export default function App() {
             <Route path="/quizzes/new" element={<ProtectedRoute><GenerateQuizPage /></ProtectedRoute>} />
             <Route path="/quizzes/:quizId" element={<ProtectedRoute><QuizSessionPage /></ProtectedRoute>} />
             <Route path="/quizzes/:quizId/results" element={<ProtectedRoute><QuizResultsPage /></ProtectedRoute>} />
-            <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
+            <Route path="/concept-maps" element={<ProtectedRoute><ConceptMapsListPage /></ProtectedRoute>} />
+            <Route path="/concept-maps/new" element={<ProtectedRoute><GenerateConceptMapPage /></ProtectedRoute>} />
+            <Route path="/concept-maps/:id/play" element={<ProtectedRoute><ConceptMapGamePage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

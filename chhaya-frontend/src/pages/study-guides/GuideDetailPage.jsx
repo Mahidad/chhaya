@@ -11,6 +11,7 @@ import rehypeTextify from "../../utils/rehypeTextify";
 import { getStudyGuide, deleteStudyGuide, renameStudyGuide, updateStudyGuideContent } from "../../api/studyGuides";
 import { recordGuideView } from "../../api/progress";
 import AnnotatableText, { HighlightableText } from "../../components/annotations/AnnotatableText";
+import NarrationPanel from "../../components/narration/NarrationPanel";
 import { ContentType } from "../../constants/contentTypes";
 
 export default function GuideDetailPage() {
@@ -236,6 +237,16 @@ export default function GuideDetailPage() {
           </div>
         </div>
         <div className="col-side">
+          {/* Module 3 (Lamia): narrate this guide's own content, in its
+              own teaching style automatically -- no picker needed here,
+              unlike a note which has no inherent style of its own. */}
+          <div style={{ marginBottom: 16 }}>
+            <NarrationPanel
+              contentType={ContentType.STUDY_GUIDE}
+              contentId={guide.id}
+              guideTeacherProfileId={guide.teacher_profile_id}
+            />
+          </div>
           {guide.formula_sheet_content && (
             <div className="card">
               <div className="card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

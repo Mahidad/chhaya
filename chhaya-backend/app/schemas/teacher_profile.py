@@ -19,6 +19,9 @@ class TeacherProfileOut(BaseModel):
     example_density: str | None
     raw_style_profile: dict[str, Any] | None
     created_at: datetime
+    # Module 3 (Lamia) -- see models/teacher_profile.py.
+    narration_voice: str = "en-US-AriaNeural"
+    narration_voice_is_guess: bool = True
     # Not a DB column -- computed fresh against the user's preference
     # profile at request time by preference_service.compute_match_score.
     # None when the user has no preference profile yet (empty library).
@@ -30,3 +33,8 @@ class TeacherProfileUpdate(BaseModel):
     display_name: str | None = None
     is_favorite: bool | None = None
     is_saved: bool | None = None
+    # Module 3 (Lamia): correcting Gemini's narration-voice guess. Setting
+    # this always flips narration_voice_is_guess to False -- see
+    # teacher_profile_service.update_profile.
+    narration_voice: str | None = None
+

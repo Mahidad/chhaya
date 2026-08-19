@@ -609,3 +609,81 @@ ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS percentage     DOUBLE PRECISION;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS pass_status    TEXT;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_answers JSONB;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_at      TIMESTAMPTZ;
+
+-- =============================================================================
+-- Module 3 (Lamia) -- AI Voice Narration (Edge TTS).
+-- One row per generated narration. A content item (a study guide or a
+-- note) can have more than one narration -- e.g. the student tries two
+-- different voices -- so this is a plain list, not a 1:1 attachment.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS narrations (
+    id                  TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id             TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    content_type        TEXT        NOT NULL,  -- 'study_guide' | 'note' -- see app/models/annotation.py ContentType, reused here
+    content_id          TEXT        NOT NULL,
+    -- Which teaching style this narration was read in. Nullable + SET
+    -- NULL (not CASCADE): if the teacher profile is later deleted, the
+    -- audio that already exists shouldn't be destroyed along with it.
+    teacher_profile_id  TEXT        REFERENCES teacher_profiles (id) ON DELETE SET NULL,
+    voice               TEXT        NOT NULL,          -- edge-tts voice id, e.g. 'en-US-AriaNeural'
+    rate                TEXT        NOT NULL DEFAULT '+0%',  -- edge-tts rate string, derived from the profile's pacing
+    status              TEXT        NOT NULL DEFAULT 'pending',  -- pending | generating | ready | failed
+    error_message       TEXT,
+    narration_text      TEXT,       -- Gemini's "reads well aloud" rewrite of the source text
+    audio_path          TEXT,       -- file on disk once ready, served via GET /narrations/{id}/audio
+    is_mock             BOOLEAN     NOT NULL DEFAULT FALSE,  -- true if either Gemini or edge-tts fell back to a placeholder
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_narrations_content ON narrations (content_type, content_id);
+CREATE INDEX IF NOT EXISTS idx_narrations_user_id ON narrations (user_id);
+
+-- Module 3 fix -- 2026-08-17: teacher profiles get a narration voice.
+-- Gemini makes a one-time best-effort guess (from the channel name +
+-- transcript, see teaching_style_service.py) at analysis time; the
+-- student can correct it once in the Style Library, which flips
+-- narration_voice_is_guess to false. Every narration of every note/guide
+-- filed under this profile then just uses this value -- no more
+-- per-narration voice picker.
+ALTER TABLE teacher_profiles ADD COLUMN IF NOT EXISTS narration_voice TEXT NOT NULL DEFAULT 'en-US-AriaNeural';
+ALTER TABLE teacher_profiles ADD COLUMN IF NOT EXISTS narration_voice_is_guess BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- =============================================================================
+-- Module 3 (Lamia) -- Concept Map active-recall game.
+-- Generation is pure NLTK/regex, no AI call (see
+-- app/utils/concept_extraction.py) -- which is also why there's no
+-- pending/generating status here like every AI-backed feature elsewhere:
+-- extraction is fast enough to finish inside the same request, so a map
+-- is always created already 'ready' or 'failed', never left mid-flight.
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS concept_maps (
+    id                   TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id              TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    chapter_id           TEXT        REFERENCES chapters (id) ON DELETE SET NULL,
+    title                TEXT        NOT NULL,
+    extraction_mode      TEXT        NOT NULL,  -- 'text' | 'formula'
+    source_content_type  TEXT,                  -- 'study_guide' | NULL (pasted text)
+    source_content_id    TEXT,
+    items                JSONB       NOT NULL,  -- [{id, template, answer}, ...] -- see concept_extraction.py
+    is_basic_mode        BOOLEAN     NOT NULL DEFAULT FALSE,  -- true if NLTK data wasn't available (see _ensure_nltk)
+    status               TEXT        NOT NULL DEFAULT 'ready',  -- 'ready' | 'failed'
+    error_message        TEXT,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_concept_maps_user_id ON concept_maps (user_id);
+CREATE INDEX IF NOT EXISTS idx_concept_maps_chapter_id ON concept_maps (chapter_id);
+
+-- One row per completed playthrough -- feeds Amiyo's analytics dashboard
+-- the same way study_guide_views does, without needing this feature to
+-- know anything about how that dashboard reads its data.
+CREATE TABLE IF NOT EXISTS concept_map_attempts (
+    id              TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id         TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    concept_map_id  TEXT        NOT NULL REFERENCES concept_maps (id) ON DELETE CASCADE,
+    correct_count   INTEGER     NOT NULL,
+    total_count     INTEGER     NOT NULL,
+    completed_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_concept_map_attempts_map_id ON concept_map_attempts (concept_map_id);

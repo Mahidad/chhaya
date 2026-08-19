@@ -11,6 +11,7 @@ import {
   deleteTeacherProfile,
   getPreferenceProfile,
 } from "../../api/teacherProfiles";
+import { listVoices } from "../../api/narrations";
 
 /*
   Feature 3 (Teacher Profile Library CRUD + Favorites) -- built as the
@@ -25,6 +26,7 @@ export default function StyleLibraryPage() {
   const [profiles, setProfiles] = useState(null); // null = loading
   const [preference, setPreference] = useState(null);
   const [codingCount, setCodingCount] = useState(0);
+  const [voices, setVoices] = useState([]);
   const [renaming, setRenaming] = useState(null); // profile being renamed, or null
   const [deleting, setDeleting] = useState(null); // profile being deleted, or null
 
@@ -35,7 +37,19 @@ export default function StyleLibraryPage() {
 
   useEffect(() => {
     refresh();
+    listVoices().then(setVoices);
   }, []);
+
+  async function changeVoice(profile, voiceId) {
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === profile.id ? { ...p, narration_voice: voiceId, narration_voice_is_guess: false } : p))
+    );
+    try {
+      await updateTeacherProfile(profile.id, { narration_voice: voiceId });
+    } catch {
+      refresh();
+    }
+  }
 
   async function togglePin(profile) {
     setProfiles((prev) =>
@@ -113,13 +127,13 @@ export default function StyleLibraryPage() {
                     <Icon name="pin" size={13} /> Pinned
                   </div>
                   {pinned.map((p) => (
-                    <ProfileRow key={p.id} profile={p} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} />
+                    <ProfileRow key={p.id} profile={p} voices={voices} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} onChangeVoice={changeVoice} />
                   ))}
                 </>
               )}
               <div className="list-section">All profiles</div>
               {rest.map((p) => (
-                <ProfileRow key={p.id} profile={p} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} />
+                <ProfileRow key={p.id} profile={p} voices={voices} onTogglePin={togglePin} onRename={setRenaming} onDelete={setDeleting} onChangeVoice={changeVoice} />
               ))}
             </div>
           )}
@@ -216,7 +230,7 @@ const VOCAB_LABEL = { beginner: "Beginner vocab", intermediate: "Intermediate vo
 const ANALOGY_LABEL = { low: "Few analogies", medium: "Some analogies", high: "Analogy-heavy" };
 const EXAMPLE_LABEL = { low: "Few examples", medium: "Some examples", high: "Example-rich" };
 
-function ProfileRow({ profile, onTogglePin, onRename, onDelete }) {
+function ProfileRow({ profile, voices, onTogglePin, onRename, onDelete, onChangeVoice }) {
   return (
     <div className="prow" style={{ alignItems: "flex-start" }}>
       <span
@@ -242,6 +256,28 @@ function ProfileRow({ profile, onTogglePin, onRename, onDelete }) {
           )}
           {profile.example_density && (
             <Badge variant="plum">{EXAMPLE_LABEL[profile.example_density.toLowerCase()] || profile.example_density}</Badge>
+          )}
+        </div>
+        {/* Module 3 (Lamia): the voice every narration of this teacher's
+            content uses. Gemini's one-time guess (from the channel name
+            + transcript -- see teaching_style_service.py) is a heuristic,
+            not a fact, so it's clearly labeled as such until corrected. */}
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          <Icon name="volume" size={13} />
+          <select
+            className="select"
+            style={{ fontSize: 12, padding: "3px 6px" }}
+            value={profile.narration_voice}
+            onChange={(e) => onChangeVoice(profile, e.target.value)}
+          >
+            {voices.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+          </select>
+          {profile.narration_voice_is_guess ? (
+            <span className="hint" title="Gemini's best guess from the channel name and transcript -- it can't hear the actual audio. Change it above if it's wrong.">
+              AI best guess
+            </span>
+          ) : (
+            <span className="hint">Confirmed by you</span>
           )}
         </div>
       </div>

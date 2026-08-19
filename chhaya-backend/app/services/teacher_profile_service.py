@@ -47,6 +47,14 @@ def update_profile(
     # exclude_unset=True: only the fields the client actually sent get
     # touched, so toggling `is_favorite` alone never blanks out `display_name`.
     changes = payload.model_dump(exclude_unset=True)
+
+    # Module 3 (Lamia): the moment the student corrects Gemini's
+    # narration-voice guess, it's no longer a guess -- flip the flag in
+    # the same update so the Style Library can show "confirmed by you"
+    # instead of "AI best guess" from this point on, permanently.
+    if "narration_voice" in changes:
+        changes["narration_voice_is_guess"] = False
+
     updated = teacher_profile_repository.update(db, db_obj=profile, obj_in=changes)
 
     # Favoriting is one of the two signals the preference weighting
