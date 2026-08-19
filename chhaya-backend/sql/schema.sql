@@ -567,7 +567,6 @@ CREATE TABLE IF NOT EXISTS quizzes (
     title              TEXT        NOT NULL,
     difficulty         TEXT        NOT NULL,
     num_questions      INTEGER     NOT NULL,
-    marks_per_question INTEGER     NOT NULL,
     duration_minutes   INTEGER     NOT NULL,
     attempt_number     INTEGER     NOT NULL DEFAULT 1,
     status             TEXT        NOT NULL DEFAULT 'not_started',
@@ -616,3 +615,4 @@ ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS max_marks INTEGER;
 
 -- Feature 7 note-based generation (each quiz is now tied to a specific note)
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS note_id TEXT REFERENCES notes(id) ON DELETE SET NULL;
+ALTER TABLE quizzes DROP COLUMN IF EXISTS marks_per_question;

@@ -99,6 +99,11 @@ def list_quizzes(
             ends_at=q.ends_at,
             submitted_at=q.submitted_at,
             created_at=q.created_at,
+            total_score=q.total_score,
+            max_score=q.max_score,
+            percentage=q.percentage,
+            pass_status=q.pass_status,
+            graded_at=q.graded_at,
         )
         for q in quizzes
     ]
