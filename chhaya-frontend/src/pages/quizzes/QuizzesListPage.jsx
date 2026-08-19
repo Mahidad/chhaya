@@ -142,7 +142,7 @@ export default function QuizzesListPage() {
                 <div style={{ flex: "1 1 220px" }}>
                   <div style={{ fontWeight: 700, color: "var(--ink)" }}>{quiz.title}</div>
                   <div className="hint" style={{ marginTop: 4 }}>
-                    {quiz.num_questions}Q · {quiz.marks_per_question}M each · {quiz.duration_minutes} min
+                    {quiz.num_questions}Q · {quiz.min_marks}–{quiz.max_marks}M · {quiz.duration_minutes} min
                     {" · "}Attempt #{quiz.attempt_number}
                     {/* Show score if graded */}
                     {isGraded && (

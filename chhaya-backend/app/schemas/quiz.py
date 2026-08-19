@@ -2,15 +2,22 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class QuizGenerateIn(BaseModel):
     """What the student sends to kick off quiz generation."""
     chapter_id: str
     num_questions: int = Field(ge=1, le=20)
-    marks_per_question: int = Field(ge=1, le=10)
+    min_marks: int = Field(ge=1, le=10)
+    max_marks: int = Field(ge=1, le=10)
     difficulty: str = Field(pattern="^(easy|medium|hard)$")
+
+    @model_validator(mode="after")
+    def check_marks_range(self):
+        if self.max_marks < self.min_marks:
+            raise ValueError("max_marks must be >= min_marks")
+        return self
 
 
 class QuizQuestionOut(BaseModel):
@@ -27,7 +34,8 @@ class QuizOut(BaseModel):
     title: str
     difficulty: str
     num_questions: int
-    marks_per_question: int
+    min_marks: int
+    max_marks: int
     duration_minutes: int
     attempt_number: int
     status: str
@@ -49,7 +57,8 @@ class QuizDetailOut(BaseModel):
     title: str
     difficulty: str
     num_questions: int
-    marks_per_question: int
+    min_marks: int
+    max_marks: int
     duration_minutes: int
     attempt_number: int
     status: str

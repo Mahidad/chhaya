@@ -19,7 +19,8 @@ export default function GenerateQuizPage() {
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedChapterId, setSelectedChapterId] = useState("");
   const [numQuestions, setNumQuestions] = useState(5);
-  const [marksPerQuestion, setMarksPerQuestion] = useState(2);
+  const [minMarks, setMinMarks] = useState(2);
+  const [maxMarks, setMaxMarks] = useState(5);
   const [difficulty, setDifficulty] = useState("medium");
 
   // UI state
@@ -50,7 +51,7 @@ export default function GenerateQuizPage() {
   async function handleGenerate() {
     setError("");
 
-    // Basic validation
+    // Client-side validation
     if (!selectedChapterId) {
       setError("Please select a chapter first.");
       return;
@@ -59,8 +60,16 @@ export default function GenerateQuizPage() {
       setError("Number of questions must be between 1 and 20.");
       return;
     }
-    if (marksPerQuestion < 1 || marksPerQuestion > 10) {
-      setError("Marks per question must be between 1 and 10.");
+    if (minMarks < 1 || minMarks > 10) {
+      setError("Minimum marks must be between 1 and 10.");
+      return;
+    }
+    if (Number(maxMarks) < Number(minMarks)) {
+      setError("Maximum marks must be greater than or equal to minimum marks.");
+      return;
+    }
+    if (maxMarks > 10) {
+      setError("Maximum marks cannot exceed 10.");
       return;
     }
 
@@ -69,7 +78,8 @@ export default function GenerateQuizPage() {
       const quiz = await generateQuiz(
         selectedChapterId,
         Number(numQuestions),
-        Number(marksPerQuestion),
+        Number(minMarks),
+        Number(maxMarks),
         difficulty
       );
       // Navigate straight to the quiz session page
@@ -135,15 +145,31 @@ export default function GenerateQuizPage() {
           />
         </div>
 
-        <div style={{ marginTop: 16 }}>
-          <TextField
-            label="Marks per question (1–10)"
-            type="number"
-            min={1}
-            max={10}
-            value={marksPerQuestion}
-            onChange={(e) => setMarksPerQuestion(e.target.value)}
-          />
+        {/* Marks range — two inputs side by side */}
+        <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <TextField
+              label="Minimum marks (1–10)"
+              type="number"
+              min={1}
+              max={10}
+              value={minMarks}
+              onChange={(e) => setMinMarks(e.target.value)}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <TextField
+              label="Maximum marks (≥ min)"
+              type="number"
+              min={1}
+              max={10}
+              value={maxMarks}
+              onChange={(e) => setMaxMarks(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="hint" style={{ marginTop: 6 }}>
+          Gemini will assign each question a different marks value within this range based on complexity.
         </div>
 
         <div style={{ marginTop: 16 }}>
@@ -152,16 +178,19 @@ export default function GenerateQuizPage() {
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
           >
-            <option value="easy">Easy (2 min / question)</option>
-            <option value="medium">Medium (3 min / question)</option>
-            <option value="hard">Hard (5 min / question)</option>
+            <option value="easy">Easy (base 2 min / question)</option>
+            <option value="medium">Medium (base 3 min / question)</option>
+            <option value="hard">Hard (base 5 min / question)</option>
           </SelectField>
         </div>
 
-        {/* Estimated duration hint */}
-        {numQuestions > 0 && (
+        {/* Estimated duration hint using midpoint of marks range */}
+        {numQuestions > 0 && minMarks > 0 && Number(maxMarks) >= Number(minMarks) && (
           <div className="hint" style={{ marginTop: 12 }}>
-            Estimated duration: {numQuestions * (difficulty === "easy" ? 2 : difficulty === "hard" ? 5 : 3)} minutes
+            Estimated duration: ~{Math.ceil(
+              numQuestions * ((difficulty === "easy" ? 2 : difficulty === "hard" ? 5 : 3) +
+              ((Number(minMarks) + Number(maxMarks)) / 2) * 0.5)
+            )} minutes
           </div>
         )}
 
