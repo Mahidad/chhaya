@@ -13,8 +13,10 @@ from datetime import datetime, timedelta, timezone
 
 import psycopg
 
+from app.models.note import Note, NoteType
 from app.models.quiz import Quiz, QuizQuestion
 from app.repositories import quiz_repository
+from app.repositories.note_repository import note_repository
 from app.services import quiz_generation_service
 
 import math
@@ -35,27 +37,17 @@ MAX_CHAR_LIMIT = 15000
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-def _fetch_notes_text(db: psycopg.Connection, *, chapter_id: str, user_id: str) -> str:
+def _fetch_note(db: psycopg.Connection, *, note_id: str, user_id: str) -> Note:
     """
-    Fetch all typed notes for a chapter and join them into one block of text.
-    Only 'text' type notes have text_content; image/pdf notes are skipped.
+    Fetch a single note by ID, verifying it belongs to this user.
+    Raises ValueError if not found.
     """
-    with db.cursor() as cur:
-        cur.execute(
-            """
-            SELECT text_content
-              FROM notes
-             WHERE chapter_id = %s AND user_id = %s AND note_type = 'text'
-               AND text_content IS NOT NULL
-             ORDER BY created_at ASC
-            """,
-            (chapter_id, user_id),
+    note = note_repository.get_for_user(db, note_id=note_id, user_id=user_id)
+    if note is None:
+        raise ValueError(
+            "Note not found. It may have been deleted or doesn't belong to you."
         )
-        rows = cur.fetchall()
-
-    # Join all note bodies with a blank line separator
-    combined = "\n\n".join(row[0] for row in rows if row[0])
-    return combined
+    return note
 
 
 def _calculate_duration(questions: list[dict]) -> int:
@@ -83,7 +75,7 @@ def generate_quiz(
     db: psycopg.Connection,
     *,
     user_id: str,
-    chapter_id: str,
+    note_id: str,
     num_questions: int,
     min_marks: int,
     max_marks: int,
@@ -91,55 +83,76 @@ def generate_quiz(
 ) -> tuple[Quiz, list[QuizQuestion]]:
     """
     Full generation pipeline:
-      1. Fetch notes text for the chapter
-      2. Check word count (reject if too short)
-      3. Truncate if too long
+      1. Fetch the selected note and verify ownership
+      2. Branch on note_type:
+           - 'text'       → send text_content to Gemini (existing flow)
+           - 'pdf'/'image' → send the file to Gemini as a multimodal part
+      3. Validate content (word-count for text; file existence for PDF/image)
       4. Ask Gemini to generate questions
-      5. Calculate duration
-      6. Figure out attempt number
-      7. Save quiz + questions to DB
-      8. Return (quiz, questions)
+      5. Calculate duration from per-question marks + difficulty
+      6. Derive chapter_id from the note itself
+      7. Count attempts per note (not per chapter)
+      8. Save quiz + questions to DB
+      9. Return (quiz, questions)
     """
-    # Step 1: fetch notes
-    notes_text = _fetch_notes_text(db, chapter_id=chapter_id, user_id=user_id)
+    # Step 1: fetch the note
+    note = _fetch_note(db, note_id=note_id, user_id=user_id)
+    chapter_id = note.chapter_id
 
-    # Step 2: validate minimum content
-    word_count = len(notes_text.split())
-    if word_count < MIN_WORD_COUNT:
-        raise ValueError(
-            f"Not enough notes content. Your notes for this chapter have only "
-            f"{word_count} words. Please add more notes (minimum {MIN_WORD_COUNT} words) "
-            "before generating a quiz."
+    # Step 2 & 3: branch on note type and validate
+    if note.note_type == NoteType.TEXT:
+        notes_text = note.text_content or ""
+        word_count = len(notes_text.split())
+        if word_count < MIN_WORD_COUNT:
+            raise ValueError(
+                f"Not enough notes content. This note has only {word_count} words. "
+                f"Please add more text (minimum {MIN_WORD_COUNT} words) before generating a quiz."
+            )
+        # Truncate if too long
+        if len(notes_text) > MAX_CHAR_LIMIT:
+            notes_text = notes_text[:MAX_CHAR_LIMIT]
+
+        # Step 4: generate via text path
+        raw_questions = quiz_generation_service.generate_questions(
+            notes_text=notes_text,
+            num_questions=num_questions,
+            min_marks=min_marks,
+            max_marks=max_marks,
+            difficulty=difficulty,
         )
+    else:
+        # PDF or image note — validate file is readable before calling Gemini
+        if not note.file_path:
+            raise ValueError(
+                "This note has no file attached. Please re-upload the note and try again."
+            )
 
-    # Step 3: truncate if too long
-    if len(notes_text) > MAX_CHAR_LIMIT:
-        notes_text = notes_text[:MAX_CHAR_LIMIT]
-
-    # Step 4: generate questions via Gemini (marks vary per question)
-    raw_questions = quiz_generation_service.generate_questions(
-        notes_text=notes_text,
-        num_questions=num_questions,
-        min_marks=min_marks,
-        max_marks=max_marks,
-        difficulty=difficulty,
-    )
+        # Step 4: generate via multimodal path
+        raw_questions = quiz_generation_service.generate_questions_from_file(
+            file_path=note.file_path,
+            num_questions=num_questions,
+            min_marks=min_marks,
+            max_marks=max_marks,
+            difficulty=difficulty,
+        )
 
     # Step 5: calculate duration from per-question difficulty + marks
     duration_minutes = _calculate_duration(raw_questions)
 
-    # Step 6: attempt number = how many quizzes exist for this chapter + 1
-    existing_count = quiz_repository.count_attempts_for_chapter(
-        db, user_id=user_id, chapter_id=chapter_id
+    # Step 6 & 7: derive chapter, count per-note attempts
+    existing_count = quiz_repository.count_attempts_for_note(
+        db, user_id=user_id, note_id=note_id
     )
     attempt_number = existing_count + 1
 
-    # Step 7: save quiz header row
-    title = f"Quiz – {difficulty.capitalize()} ({num_questions}Q, {min_marks}–{max_marks}M)"
+    # Step 8: save quiz header row (chapter_id kept for list-page grouping)
+    note_type_label = "Text" if note.note_type == NoteType.TEXT else note.note_type.upper()
+    title = f"Quiz – {difficulty.capitalize()} ({num_questions}Q, {min_marks}–{max_marks}M) [{note_type_label}]"
     quiz = quiz_repository.create_quiz(
         db,
         user_id=user_id,
         chapter_id=chapter_id,
+        note_id=note_id,
         title=title,
         difficulty=difficulty,
         num_questions=num_questions,
@@ -149,7 +162,7 @@ def generate_quiz(
         attempt_number=attempt_number,
     )
 
-    # Step 8: save each question row
+    # Step 9: save each question row
     questions = []
     for q in raw_questions:
         question = quiz_repository.create_question(

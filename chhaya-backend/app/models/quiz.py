@@ -9,6 +9,7 @@ class Quiz:
     id: str
     user_id: str
     chapter_id: str
+    note_id: str | None
     title: str
     difficulty: str
     num_questions: int

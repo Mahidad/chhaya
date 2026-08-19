@@ -609,3 +609,10 @@ ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS percentage     DOUBLE PRECISION;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS pass_status    TEXT;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_answers JSONB;
 ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_at      TIMESTAMPTZ;
+
+-- Feature 7 marks range (replaces marks_per_question)
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS min_marks INTEGER;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS max_marks INTEGER;
+
+-- Feature 7 note-based generation (each quiz is now tied to a specific note)
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS note_id TEXT REFERENCES notes(id) ON DELETE SET NULL;

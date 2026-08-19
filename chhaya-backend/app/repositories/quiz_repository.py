@@ -27,6 +27,7 @@ def create_quiz(
     *,
     user_id: str,
     chapter_id: str,
+    note_id: str | None,
     title: str,
     difficulty: str,
     num_questions: int,
@@ -40,14 +41,14 @@ def create_quiz(
         cur.execute(
             """
             INSERT INTO quizzes
-              (id, user_id, chapter_id, title, difficulty,
+              (id, user_id, chapter_id, note_id, title, difficulty,
                num_questions, min_marks, max_marks, duration_minutes, attempt_number)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
                 str(uuid.uuid4()),
-                user_id, chapter_id, title, difficulty,
+                user_id, chapter_id, note_id, title, difficulty,
                 num_questions, min_marks, max_marks, duration_minutes, attempt_number,
             ),
         )
@@ -114,11 +115,23 @@ def list_questions(
 def count_attempts_for_chapter(
     db: psycopg.Connection, *, user_id: str, chapter_id: str
 ) -> int:
-    """Count how many quizzes this user has already generated for this chapter."""
+    """Count how many quizzes this user has generated for this chapter."""
     with db.cursor() as cur:
         cur.execute(
             "SELECT COUNT(*) FROM quizzes WHERE user_id = %s AND chapter_id = %s",
             (user_id, chapter_id),
+        )
+        return cur.fetchone()[0]
+
+
+def count_attempts_for_note(
+    db: psycopg.Connection, *, user_id: str, note_id: str
+) -> int:
+    """Count how many quizzes this user has generated from this specific note."""
+    with db.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM quizzes WHERE user_id = %s AND note_id = %s",
+            (user_id, note_id),
         )
         return cur.fetchone()[0]
 
