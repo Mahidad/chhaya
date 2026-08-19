@@ -17,8 +17,10 @@ from app.models.quiz import Quiz, QuizQuestion
 from app.repositories import quiz_repository
 from app.services import quiz_generation_service
 
-# Minutes per question for each difficulty level
-MINUTES_PER_QUESTION = {
+import math
+
+# Base minutes per question by difficulty (used in duration formula)
+BASE_MINUTES = {
     "easy": 2,
     "medium": 3,
     "hard": 5,
@@ -56,10 +58,23 @@ def _fetch_notes_text(db: psycopg.Connection, *, chapter_id: str, user_id: str) 
     return combined
 
 
-def _calculate_duration(num_questions: int, difficulty: str) -> int:
-    """Return total quiz duration in minutes."""
-    minutes_per_q = MINUTES_PER_QUESTION.get(difficulty, 3)
-    return num_questions * minutes_per_q
+def _calculate_duration(questions: list[dict]) -> int:
+    """
+    Return total quiz duration in minutes.
+
+    Formula per question:
+      base_time = BASE_MINUTES[difficulty]   (2 / 3 / 5)
+      time_for_question = base_time + (marks * 0.5)   # +30 sec per mark
+
+    Total is summed across all questions, then rounded up to the nearest minute.
+    """
+    total_seconds = 0.0
+    for q in questions:
+        difficulty = q.get("difficulty", "medium").lower()
+        marks = q.get("marks", 1)
+        base = BASE_MINUTES.get(difficulty, 3)
+        total_seconds += (base + marks * 0.5) * 60
+    return math.ceil(total_seconds / 60)
 
 
 # ── main actions ──────────────────────────────────────────────────────────────
@@ -70,7 +85,8 @@ def generate_quiz(
     user_id: str,
     chapter_id: str,
     num_questions: int,
-    marks_per_question: int,
+    min_marks: int,
+    max_marks: int,
     difficulty: str,
 ) -> tuple[Quiz, list[QuizQuestion]]:
     """
@@ -100,16 +116,17 @@ def generate_quiz(
     if len(notes_text) > MAX_CHAR_LIMIT:
         notes_text = notes_text[:MAX_CHAR_LIMIT]
 
-    # Step 4: generate questions via Gemini
+    # Step 4: generate questions via Gemini (marks vary per question)
     raw_questions = quiz_generation_service.generate_questions(
         notes_text=notes_text,
         num_questions=num_questions,
-        marks_per_question=marks_per_question,
+        min_marks=min_marks,
+        max_marks=max_marks,
         difficulty=difficulty,
     )
 
-    # Step 5: calculate duration
-    duration_minutes = _calculate_duration(num_questions, difficulty)
+    # Step 5: calculate duration from per-question difficulty + marks
+    duration_minutes = _calculate_duration(raw_questions)
 
     # Step 6: attempt number = how many quizzes exist for this chapter + 1
     existing_count = quiz_repository.count_attempts_for_chapter(
@@ -118,7 +135,7 @@ def generate_quiz(
     attempt_number = existing_count + 1
 
     # Step 7: save quiz header row
-    title = f"Quiz – {difficulty.capitalize()} ({num_questions}Q)"
+    title = f"Quiz – {difficulty.capitalize()} ({num_questions}Q, {min_marks}–{max_marks}M)"
     quiz = quiz_repository.create_quiz(
         db,
         user_id=user_id,
@@ -126,7 +143,8 @@ def generate_quiz(
         title=title,
         difficulty=difficulty,
         num_questions=num_questions,
-        marks_per_question=marks_per_question,
+        min_marks=min_marks,
+        max_marks=max_marks,
         duration_minutes=duration_minutes,
         attempt_number=attempt_number,
     )

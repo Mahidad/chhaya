@@ -158,7 +158,8 @@ export default function QuizSessionPage() {
     );
   }
 
-  const totalMarks = quiz.num_questions * quiz.marks_per_question;
+  // Total marks = sum of each question's individual marks
+  const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
 
 
   // ── PHASE: setup (not started yet) ──────────────────────────────────────────
@@ -180,8 +181,8 @@ export default function QuizSessionPage() {
               <span style={{ fontWeight: 600 }}>{quiz.num_questions}</span>
             </div>
             <div className="prow" style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--muted)" }}>Marks per question</span>
-              <span style={{ fontWeight: 600 }}>{quiz.marks_per_question}</span>
+              <span style={{ color: "var(--muted)" }}>Marks range</span>
+              <span style={{ fontWeight: 600 }}>{quiz.min_marks}–{quiz.max_marks} per question</span>
             </div>
             <div className="prow" style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--muted)" }}>Total marks</span>

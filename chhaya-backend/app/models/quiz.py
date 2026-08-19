@@ -12,7 +12,8 @@ class Quiz:
     title: str
     difficulty: str
     num_questions: int
-    marks_per_question: int
+    min_marks: int
+    max_marks: int
     duration_minutes: int
     attempt_number: int
     status: str

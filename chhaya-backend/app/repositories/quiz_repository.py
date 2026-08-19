@@ -30,7 +30,8 @@ def create_quiz(
     title: str,
     difficulty: str,
     num_questions: int,
-    marks_per_question: int,
+    min_marks: int,
+    max_marks: int,
     duration_minutes: int,
     attempt_number: int,
 ) -> Quiz:
@@ -40,14 +41,14 @@ def create_quiz(
             """
             INSERT INTO quizzes
               (id, user_id, chapter_id, title, difficulty,
-               num_questions, marks_per_question, duration_minutes, attempt_number)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+               num_questions, min_marks, max_marks, duration_minutes, attempt_number)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
                 str(uuid.uuid4()),
                 user_id, chapter_id, title, difficulty,
-                num_questions, marks_per_question, duration_minutes, attempt_number,
+                num_questions, min_marks, max_marks, duration_minutes, attempt_number,
             ),
         )
         return _to_quiz(cur.fetchone())
