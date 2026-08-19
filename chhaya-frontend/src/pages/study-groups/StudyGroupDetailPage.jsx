@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import { TextField } from "../../components/ui/Field";
 import {
   getStudyGroup,
+  deleteStudyGroup,
   inviteStudent,
   requestToJoin,
   respondToJoinRequest,
@@ -35,6 +36,16 @@ export default function StudyGroupDetailPage() {
       load();
     } catch (err) {
       setError(err.response?.data?.detail || "Could not send join request.");
+    }
+  }
+
+  async function deleteGroup() {
+    if (!window.confirm("Delete this study group? This cannot be undone.")) return;
+    try {
+      await deleteStudyGroup(id);
+      navigate("/study-groups");
+    } catch (err) {
+      setError(err.response?.data?.detail || "Could not delete this group.");
     }
   }
 
@@ -68,7 +79,10 @@ export default function StudyGroupDetailPage() {
           <div className="page-title">{group.name}</div>
           <div className="page-sub">Created by {group.creator_name}</div>
         </div>
-        <Button variant="ghost" onClick={() => navigate("/study-groups")}>Back</Button>
+        <div className="page-actions">
+          {isCreator && <Button variant="danger" onClick={deleteGroup}>Delete group</Button>}
+          <Button variant="ghost" onClick={() => navigate("/study-groups")}>Back</Button>
+        </div>
       </div>
       <div className="card card-pad" style={{ marginBottom: 16 }}><p>{group.description}</p><div className="hint">{group.member_count} member{group.member_count === 1 ? "" : "s"}</div></div>
       {message && <div className="banner"><div className="banner-copy">{message}</div></div>}

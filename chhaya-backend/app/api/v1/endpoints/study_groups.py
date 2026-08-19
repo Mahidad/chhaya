@@ -85,6 +85,18 @@ def get_study_group(
         _error(exc)
 
 
+@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_study_group(
+    group_id: str,
+    db: psycopg.Connection = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        study_group_service.delete_group(db, group_id=group_id, creator_id=current_user.id)
+    except (NotFoundError, PermissionDeniedError) as exc:
+        _error(exc)
+
+
 @router.post("/{group_id}/invite", status_code=status.HTTP_204_NO_CONTENT)
 def invite_student(
     group_id: str,
