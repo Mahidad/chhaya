@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     courses,
     glossary,
     notes,
+    quizzes,
 )
 
 api_router = APIRouter()
@@ -44,3 +45,4 @@ api_router.include_router(courses.router)
 api_router.include_router(courses.chapters_router)
 api_router.include_router(glossary.router)
 api_router.include_router(notes.router)
+api_router.include_router(quizzes.router)
