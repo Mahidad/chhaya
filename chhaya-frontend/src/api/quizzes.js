@@ -48,3 +48,25 @@ export async function submitQuiz(quizId, answers) {
 export async function deleteQuiz(quizId) {
   await client.delete(`/quizzes/${quizId}`);
 }
+
+
+// ── Feature 8 ──────────────────────────────────────────────────────────────
+
+/** Grade a submitted quiz using Gemini. Returns the full graded result. */
+export async function gradeQuiz(quizId) {
+  const { data } = await client.post(`/quizzes/${quizId}/grade`);
+  return data;
+}
+
+/** Get the already-graded results for a quiz. */
+export async function getQuizResults(quizId) {
+  const { data } = await client.get(`/quizzes/${quizId}/results`);
+  return data;
+}
+
+/** Retry: generate a new quiz for the same chapter and settings. */
+export async function retryQuiz(quizId) {
+  const { data } = await client.post(`/quizzes/${quizId}/retry`);
+  return data;
+}
+

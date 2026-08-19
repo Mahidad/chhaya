@@ -177,3 +177,40 @@ def delete_quiz(
             (quiz_id, user_id),
         )
         return cur.rowcount > 0
+
+
+def save_grading_result(
+    db: psycopg.Connection,
+    *,
+    quiz_id: str,
+    user_id: str,
+    total_score: int,
+    max_score: int,
+    percentage: float,
+    pass_status: str,
+    graded_answers: list,
+) -> Quiz | None:
+    """Write the grading outcome back onto the quiz row."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    with db.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            """
+            UPDATE quizzes
+               SET total_score    = %s,
+                   max_score      = %s,
+                   percentage     = %s,
+                   pass_status    = %s,
+                   graded_answers = %s,
+                   graded_at      = %s
+             WHERE id = %s AND user_id = %s
+            RETURNING *
+            """,
+            (
+                total_score, max_score, percentage, pass_status,
+                Jsonb(graded_answers), now,
+                quiz_id, user_id,
+            ),
+        )
+        return _to_quiz(cur.fetchone())
+

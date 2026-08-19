@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 
 import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
-import { getQuizDetail, startQuiz, submitQuiz } from "../../api/quizzes";
+import { getQuizDetail, startQuiz, submitQuiz, gradeQuiz } from "../../api/quizzes";
 
 
 // ── timer helpers ─────────────────────────────────────────────────────────────
@@ -45,6 +45,8 @@ export default function QuizSessionPage() {
   const [phase, setPhase] = useState("setup");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);  // { status, submitted_at }
+  const [grading, setGrading] = useState(false); // true while Gemini is grading
+  const [gradeError, setGradeError] = useState("");
 
 
   // ── load quiz on mount ──────────────────────────────────────────────────────
@@ -224,6 +226,20 @@ export default function QuizSessionPage() {
 
   if (phase === "done") {
     const wasAuto = result?.status === "auto_submitted";
+
+    async function handleGrade() {
+      setGradeError("");
+      setGrading(true);
+      try {
+        await gradeQuiz(quizId);
+        navigate(`/quizzes/${quizId}/results`);
+      } catch (err) {
+        const detail = err.response?.data?.detail;
+        setGradeError(detail || "Grading failed. Please try again.");
+        setGrading(false);
+      }
+    }
+
     return (
       <AppShell section="Learning" current="Quizzes">
         <div className="page-head">
@@ -242,12 +258,22 @@ export default function QuizSessionPage() {
           )}
 
           <div style={{ color: "var(--muted)", marginBottom: 20 }}>
-            Your answers have been saved. Feature 2 (grading) will evaluate them.
+            Your answers have been saved. Click "Grade quiz" to evaluate them with Gemini
+            and see your score and feedback.
           </div>
 
-          <Button variant="primary" onClick={() => navigate("/quizzes")}>
-            Back to quizzes
-          </Button>
+          {gradeError && (
+            <div className="banner banner-danger" style={{ marginBottom: 16 }}>{gradeError}</div>
+          )}
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <Button variant="primary" disabled={grading} onClick={handleGrade}>
+              {grading ? "Grading…" : "Grade quiz"}
+            </Button>
+            <Button variant="ghost" onClick={() => navigate("/quizzes")}>
+              Do it later
+            </Button>
+          </div>
         </div>
       </AppShell>
     );

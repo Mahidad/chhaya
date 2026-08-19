@@ -31,6 +31,7 @@ import SessionTracker from "./components/SessionTracker";
 import QuizzesListPage from "./pages/quizzes/QuizzesListPage";
 import GenerateQuizPage from "./pages/quizzes/GenerateQuizPage";
 import QuizSessionPage from "./pages/quizzes/QuizSessionPage";
+import QuizResultsPage from "./pages/quizzes/QuizResultsPage";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/quizzes" element={<ProtectedRoute><QuizzesListPage /></ProtectedRoute>} />
             <Route path="/quizzes/new" element={<ProtectedRoute><GenerateQuizPage /></ProtectedRoute>} />
             <Route path="/quizzes/:quizId" element={<ProtectedRoute><QuizSessionPage /></ProtectedRoute>} />
+            <Route path="/quizzes/:quizId/results" element={<ProtectedRoute><QuizResultsPage /></ProtectedRoute>} />
             <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
             <Route path="/concept-maps" element={<ProtectedRoute><ConceptMapPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />

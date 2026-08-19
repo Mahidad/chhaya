@@ -1,4 +1,4 @@
-"""Pydantic request and response schemas for the quiz API (Feature 7)."""
+"""Pydantic request and response schemas for the quiz API (Features 7 & 8)."""
 
 from datetime import datetime
 
@@ -21,7 +21,7 @@ class QuizQuestionOut(BaseModel):
 
 
 class QuizOut(BaseModel):
-    """Summary of a quiz — shown on the list page."""
+    """Summary of a quiz — shown on the list page. Includes grading fields (null until graded)."""
     id: str
     chapter_id: str
     title: str
@@ -34,6 +34,12 @@ class QuizOut(BaseModel):
     ends_at: datetime | None
     submitted_at: datetime | None
     created_at: datetime | None
+    # Feature 8 grading fields — null until graded
+    total_score: int | None
+    max_score: int | None
+    percentage: float | None
+    pass_status: str | None
+    graded_at: datetime | None
 
 
 class QuizDetailOut(BaseModel):
@@ -77,3 +83,31 @@ class QuizSubmitOut(BaseModel):
     id: str
     status: str
     submitted_at: datetime
+
+
+# ── Feature 8 schemas ─────────────────────────────────────────────────────────
+
+class GradedAnswerOut(BaseModel):
+    """One question's grading result — shown in the results breakdown."""
+    question_id: str
+    question_text: str
+    answer_text: str
+    marks_obtained: int
+    max_marks: int
+    feedback: str
+
+
+class QuizResultOut(BaseModel):
+    """Full graded result for one quiz attempt."""
+    id: str
+    chapter_id: str
+    title: str
+    difficulty: str
+    attempt_number: int
+    num_questions: int
+    total_score: int
+    max_score: int
+    percentage: float
+    pass_status: str
+    graded_at: datetime
+    graded_answers: list[GradedAnswerOut]

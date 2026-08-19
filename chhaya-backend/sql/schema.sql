@@ -541,6 +541,20 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz_id ON quiz_questions (quiz_id);
+
+-- ---------------------------------------------------------------------------
+-- Feature 8 grading columns on quizzes  (Module 3 Feature 8 – Amiyo)
+-- Added separately so the schema is safe to re-run (IF NOT EXISTS).
+-- graded_answers stores [{question_id, question_text, answer_text,
+--   marks_obtained, max_marks, feedback}] so the results page needs only
+-- one query rather than a JOIN.
+-- ---------------------------------------------------------------------------
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS total_score    INTEGER;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS max_score      INTEGER;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS percentage     DOUBLE PRECISION;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS pass_status    TEXT;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_answers JSONB;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS graded_at      TIMESTAMPTZ;
 -- ===========================================================================
 -- Module 3, Lamia -- Feature 1 (Voice Narration) + Feature 2 (Concept Map Game)
 --
