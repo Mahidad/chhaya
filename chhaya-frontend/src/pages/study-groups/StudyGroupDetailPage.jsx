@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import { TextField } from "../../components/ui/Field";
-import GroupDiscussion from "../../components/study-groups/GroupDiscussion";
+import GroupDiscussion from "./GroupDiscussion";
 import {
   getStudyGroup,
   deleteStudyGroup,
