@@ -1,29 +1,55 @@
-"""Membership checks and basic actions for group discussion messages."""
+"""Membership checks and actions for study-group discussion messages."""
 
 import psycopg
 
-from app.repositories import study_group_message_repository as repo
+from app.models.study_group_message import StudyGroupMessage
+from app.repositories.study_group_message_repository import study_group_message_repository
 from app.utils.exceptions import NotFoundError, PermissionDeniedError
 
 
 def _require_member(db: psycopg.Connection, *, group_id: str, user_id: str) -> None:
-    if not repo.is_member(db, group_id=group_id, user_id=user_id):
+    if not study_group_message_repository.is_member(
+        db, group_id=group_id, user_id=user_id
+    ):
         raise PermissionDeniedError("Only group members can access this discussion.")
 
 
-def list_messages(db: psycopg.Connection, *, group_id: str, user_id: str) -> list[dict]:
+def list_messages(
+    db: psycopg.Connection, *, group_id: str, user_id: str
+) -> list[StudyGroupMessage]:
     _require_member(db, group_id=group_id, user_id=user_id)
-    return repo.list_messages(db, group_id=group_id)
+    return study_group_message_repository.list_for_group(db, group_id=group_id)
 
 
-def post_message(db: psycopg.Connection, *, group_id: str, user_id: str, content: str) -> dict:
+def post_message(
+    db: psycopg.Connection, *, group_id: str, user_id: str, content: str
+) -> StudyGroupMessage:
     _require_member(db, group_id=group_id, user_id=user_id)
-    return repo.create_message(db, group_id=group_id, user_id=user_id, content=content.strip())
+    return study_group_message_repository.create_for_group(
+        db,
+        group_id=group_id,
+        user_id=user_id,
+        content=content.strip(),
+    )
 
 
-def change_pin(db: psycopg.Connection, *, group_id: str, message_id: str, user_id: str, pinned: bool) -> None:
+def change_pin(
+    db: psycopg.Connection,
+    *,
+    group_id: str,
+    message_id: str,
+    user_id: str,
+    pinned: bool,
+) -> None:
     _require_member(db, group_id=group_id, user_id=user_id)
-    message = repo.get_message(db, message_id=message_id, group_id=group_id)
+    message = study_group_message_repository.get_for_group(
+        db, message_id=message_id, group_id=group_id
+    )
     if not message:
         raise NotFoundError("Message not found.")
-    repo.set_pinned(db, message_id=message_id, pinned=pinned, user_id=user_id)
+    study_group_message_repository.update_pin(
+        db,
+        message=message,
+        pinned=pinned,
+        user_id=user_id,
+    )
