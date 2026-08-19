@@ -24,6 +24,45 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 -- ---------------------------------------------------------------------------
+-- study_groups
+-- The creator is automatically added as the first member.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS study_groups (
+    id          TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    creator_id  TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    name        TEXT        NOT NULL,
+    description TEXT        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS study_group_members (
+    group_id TEXT NOT NULL REFERENCES study_groups (id) ON DELETE CASCADE,
+    user_id  TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS study_group_invitations (
+    id                 TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    group_id           TEXT        NOT NULL REFERENCES study_groups (id) ON DELETE CASCADE,
+    invited_user_id    TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    invited_by_user_id TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    status             TEXT        NOT NULL DEFAULT 'pending',
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS study_group_join_requests (
+    id         TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    group_id   TEXT        NOT NULL REFERENCES study_groups (id) ON DELETE CASCADE,
+    user_id    TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    status     TEXT        NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_study_groups_creator_id ON study_groups (creator_id);
+CREATE INDEX IF NOT EXISTS idx_study_group_invitations_user_id ON study_group_invitations (invited_user_id);
+
+-- ---------------------------------------------------------------------------
 -- reference_sources
 -- One row = one YouTube video / playlist / course link a student adds.
 -- ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: "/exam-papers", label: "Upload questions", icon: "exams" },
   { to: "/likely-questions", label: "Likely questions", icon: "fileText" },
   { to: "/code-studio", label: "Code Studio", icon: "code" },
+  { to: "/study-groups", label: "Study groups", icon: "sources" },
 ];
 
 export default function Sidebar() {
