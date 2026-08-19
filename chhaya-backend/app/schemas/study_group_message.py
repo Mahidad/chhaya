@@ -1,7 +1,7 @@
 """Request and response shapes for group discussions."""
 
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MessageCreate(BaseModel):
@@ -9,6 +9,8 @@ class MessageCreate(BaseModel):
 
 
 class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     group_id: str
     user_id: str

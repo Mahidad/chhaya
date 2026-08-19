@@ -1,7 +1,7 @@
 """API request and response shapes for study groups."""
 
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StudyGroupCreate(BaseModel):
@@ -18,6 +18,8 @@ class StatusUpdate(BaseModel):
 
 
 class StudyGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     description: str
@@ -29,12 +31,16 @@ class StudyGroupOut(BaseModel):
 
 
 class GroupMemberOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     user_id: str
     full_name: str
     email: str
 
 
 class InvitationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     group_id: str
     group_name: str
@@ -45,6 +51,8 @@ class InvitationOut(BaseModel):
 
 
 class JoinRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     full_name: str
