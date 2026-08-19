@@ -10,6 +10,10 @@ export async function getStudyGroup(id) {
   return data;
 }
 
+export async function deleteStudyGroup(id) {
+  await client.delete(`/study-groups/${id}`);
+}
+
 export async function createStudyGroup({ name, description }) {
   const { data } = await client.post("/study-groups", { name, description });
   return data;

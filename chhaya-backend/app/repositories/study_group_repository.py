@@ -142,3 +142,8 @@ def get_join_request(db: psycopg.Connection, *, request_id: str, group_id: str) 
 def update_join_request(db: psycopg.Connection, *, request_id: str, status: str) -> None:
     with db.cursor() as cur:
         cur.execute("UPDATE study_group_join_requests SET status = %s WHERE id = %s", (status, request_id))
+
+
+def delete_group(db: psycopg.Connection, *, group_id: str) -> None:
+    with db.cursor() as cur:
+        cur.execute("DELETE FROM study_groups WHERE id = %s", (group_id,))

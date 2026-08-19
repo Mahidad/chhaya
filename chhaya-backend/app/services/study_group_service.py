@@ -70,3 +70,12 @@ def respond_to_join_request(db: psycopg.Connection, *, group_id: str, request_id
     repo.update_join_request(db, request_id=request_id, status=status)
     if status == "accepted":
         repo.add_member(db, group_id=group_id, user_id=request["user_id"])
+
+
+def delete_group(db: psycopg.Connection, *, group_id: str, creator_id: str) -> None:
+    group = repo.get_group(db, group_id=group_id, user_id=creator_id)
+    if not group:
+        raise NotFoundError("Study group not found.")
+    if group["creator_id"] != creator_id:
+        raise PermissionDeniedError("Only the group creator can delete this group.")
+    repo.delete_group(db, group_id=group_id)
