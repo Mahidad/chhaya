@@ -7,9 +7,7 @@ import Badge from "../../components/ui/Badge";
 import AnnotatableText, { HighlightableText } from "../../components/annotations/AnnotatableText";
 import { getNote, updateNote, getNoteFileBlob } from "../../api/notes";
 import { getChapter } from "../../api/courses";
-import { listTeacherProfiles } from "../../api/teacherProfiles";
 import { ContentType } from "../../constants/contentTypes";
-import VoiceNarrationPlayer from "../../components/voice/VoiceNarrationPlayer";
 
 /*
   Module 2 (Lamia) -- viewing (and, for text notes, editing) one uploaded
@@ -26,12 +24,10 @@ export default function NoteViewerPage() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [fileUrl, setFileUrl] = useState(null);
-  const [teacherProfiles, setTeacherProfiles] = useState([]);
 
   useEffect(() => {
     getNote(noteId).then(setNote);
     getChapter(chapterId).then(setChapter);
-    listTeacherProfiles().then(setTeacherProfiles).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, chapterId]);
 
@@ -110,8 +106,6 @@ export default function NoteViewerPage() {
           </AnnotatableText>
         )}
       </div>
-
-      <VoiceNarrationPlayer noteId={note.id} teacherProfiles={teacherProfiles} />
     </AppShell>
   );
 }

@@ -25,7 +25,6 @@ import CourseDetailPage from "./pages/courses/CourseDetailPage";
 import ChapterWorkspacePage from "./pages/courses/ChapterWorkspacePage";
 import NoteViewerPage from "./pages/courses/NoteViewerPage";
 import CodeStudioPage from "./pages/code-studio/CodeStudioPage";
-import ConceptMapPage from "./pages/concept-map/ConceptMapPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
 import QuizzesListPage from "./pages/quizzes/QuizzesListPage";
@@ -91,7 +90,6 @@ export default function App() {
             <Route path="/quizzes/:quizId" element={<ProtectedRoute><QuizSessionPage /></ProtectedRoute>} />
             <Route path="/quizzes/:quizId/results" element={<ProtectedRoute><QuizResultsPage /></ProtectedRoute>} />
             <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
-            <Route path="/concept-maps" element={<ProtectedRoute><ConceptMapPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

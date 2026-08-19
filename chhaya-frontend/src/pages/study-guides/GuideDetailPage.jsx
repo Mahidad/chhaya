@@ -12,7 +12,6 @@ import { getStudyGuide, deleteStudyGuide, renameStudyGuide, updateStudyGuideCont
 import { recordGuideView } from "../../api/progress";
 import AnnotatableText, { HighlightableText } from "../../components/annotations/AnnotatableText";
 import { ContentType } from "../../constants/contentTypes";
-import VoiceNarrationPlayer from "../../components/voice/VoiceNarrationPlayer";
 
 export default function GuideDetailPage() {
   const { id, courseId, chapterId, guideId } = useParams();
@@ -292,8 +291,6 @@ export default function GuideDetailPage() {
           )}
         </div>
       </div>
-
-      <VoiceNarrationPlayer studyGuideId={guide.id} />
     </AppShell>
   );
 }
