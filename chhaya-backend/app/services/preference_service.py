@@ -4,18 +4,15 @@ fingerprint built from their Style Library, used to score how well any
 candidate teacher profile (a source they're considering, or already have)
 matches what they actually tend to prefer.
 
-DELIBERATELY NO AI CALL ANYWHERE IN THIS FILE. Both functions here are
+Both functions here are
 plain arithmetic over numbers already sitting in Postgres -- a weighted
-mean and a distance calculation. That's not a simplification for time's
-sake; it's the point: this is the kind of feature you can build, explain,
-and reproduce by hand in the no-AI live exam, unlike the Gemini-backed
-parts of the app.
+mean and a distance calculation.
 
 HOW "PREFERENCE" IS WEIGHTED (the crude, explainable heuristic):
 Every profile in the library counts for something just by being there
 (base weight 1) -- adding a source is a mild positive signal on its own.
 On top of that:
-  - +2 if the student favorited/pinned it in the Style Library (a
+  - +2 if the student pinned it in the Style Library (a
     deliberate, stated preference)
   - +1 for every study guide generated using that profile (a *revealed*
     preference -- actually choosing to use a style repeatedly is a
@@ -23,12 +20,10 @@ On top of that:
 A profile the student pinned AND used for 4 study guides ends up weighted
 7x as heavily in the average as one just sitting unused in the library.
 
-KNOWN LIMITATION, STATED HONESTLY: with only one or two profiles in the
+KNOWN LIMITATION: with only one or two profiles in the
 library, the "preference" is really just an average of whatever's there
 -- it hasn't had a chance to reflect real taste yet. It gets more
 meaningful as the student favorites/uses things. This is a genuine
-cold-start limitation of any preference system built from usage data, not
-a bug to hide.
 """
 
 import psycopg

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import pool
+from app.services import practice_import_service
 
 
 @asynccontextmanager
@@ -20,8 +21,14 @@ async def lifespan(app: FastAPI):
     Replaces the old `@app.on_event("startup")` + Base.metadata.create_all
     pattern. Table creation is now handled outside the app by running:
         psql -U <user> -d chhaya -f sql/schema.sql
+
+    The practice-bank check below is data, not DDL: it only fills an
+    already-created table, only in development, only when that table is
+    empty, and it does its work on a background thread so startup is not
+    delayed. It never raises -- see app/services/practice_import_service.py.
     """
     pool.open(wait=True)
+    practice_import_service.maybe_import_in_background()
     yield
     pool.close()
 

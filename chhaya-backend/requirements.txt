@@ -24,3 +24,8 @@ yt-dlp>=2024.1   # playlist enumeration - see app/utils/youtube_playlist.py
 pytesseract>=0.3
 Pillow>=10.0
 pdf2image>=1.17.0
+
+# practice problem bank import (scripts/import_practice_problems.py --kaggle)
+# One-time importer, not used by the API at runtime. Needs Kaggle API
+# credentials: ~/.kaggle/kaggle.json, or KAGGLE_USERNAME + KAGGLE_KEY.
+kagglehub>=1.0

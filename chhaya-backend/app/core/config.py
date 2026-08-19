@@ -48,6 +48,19 @@ class Settings(BaseSettings):
     # app/services/teaching_style_service.py
     GEMINI_MODEL: str | None = None
 
+    # --- Practice problem bank import ---
+    # Kaggle dataset the practice bank is imported from. Kept here rather
+    # than as a command-line argument so a teammate can run
+    # `python scripts/import_practice_problems.py` with no arguments and get
+    # the same bank everyone else has -- swapping datasets is then a one-line
+    # .env change, not a differently-typed command per person.
+    # Not used by the API at runtime, only by that one-time script.
+    PRACTICE_DATASET_SLUG: str = "gzipchrist/leetcode-problem-dataset"
+    # When true (and ENV=development), a dev server that finds the bank empty
+    # imports it in the background so nobody has to run the script by hand.
+    # See maybe_import_in_background() in app/services/practice_import_service.py.
+    PRACTICE_AUTO_IMPORT: bool = True
+
     # --- Email reminders (Amiyo Module 2) ---
     # Leave unset during local development; the review page still works and
     # reminder checks report skipped emails until Resend is configured.
