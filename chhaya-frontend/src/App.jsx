@@ -25,6 +25,7 @@ import CourseDetailPage from "./pages/courses/CourseDetailPage";
 import ChapterWorkspacePage from "./pages/courses/ChapterWorkspacePage";
 import NoteViewerPage from "./pages/courses/NoteViewerPage";
 import CodeStudioPage from "./pages/code-studio/CodeStudioPage";
+import ConceptMapPage from "./pages/concept-map/ConceptMapPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import SessionTracker from "./components/SessionTracker";
 
@@ -75,7 +76,7 @@ export default function App() {
             <Route path="/likely-questions/:id" element={<ProtectedRoute><LikelyQuestionsDetailPage /></ProtectedRoute>} />
 
             <Route path="/code-studio" element={<ProtectedRoute><CodeStudioPage /></ProtectedRoute>} />
-            <Route path="/concept-maps" element={<ProtectedRoute><ComingSoonPage title="Concept maps" /></ProtectedRoute>} />
+            <Route path="/concept-maps" element={<ProtectedRoute><ConceptMapPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ComingSoonPage title="Settings" /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

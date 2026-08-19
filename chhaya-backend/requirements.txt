@@ -24,3 +24,7 @@ yt-dlp>=2024.1   # playlist enumeration - see app/utils/youtube_playlist.py
 pytesseract>=0.3
 Pillow>=10.0
 pdf2image>=1.17.0
+
+# voice narration + concept extraction (Module 3 / Lamia)
+edge-tts>=6.1        # voice narration (Module 3 Feature 1)
+nltk>=3.8            # concept extraction from prose (Module 3 Feature 2)
