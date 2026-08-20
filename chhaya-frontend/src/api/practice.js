@@ -7,7 +7,7 @@ export async function listPracticeProblems(difficulty) {
   return data;
 }
 
-export async function suggestProblems({ folderId, difficulty, limit = 5 }) {
+export async function suggestProblems({ folderId, difficulty, limit = 10 }) {
   // Returns [{ problem: {...}, reason: "why this fits your work" }]
   const { data } = await client.post("/practice/suggest", {
     folder_id: folderId,

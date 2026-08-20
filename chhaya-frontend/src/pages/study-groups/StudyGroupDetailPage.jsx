@@ -4,7 +4,6 @@ import { useAuth } from "../../context/AuthContext";
 import AppShell from "../../components/layout/AppShell";
 import Button from "../../components/ui/Button";
 import { TextField } from "../../components/ui/Field";
-import GroupDiscussion from "../../components/study-groups/GroupDiscussion";
 import {
   getStudyGroup,
   deleteStudyGroup,
@@ -81,6 +80,11 @@ export default function StudyGroupDetailPage() {
           <div className="page-sub">Created by {group.creator_name}</div>
         </div>
         <div className="page-actions">
+          {group.membership_status === "member" && (
+            <Button onClick={() => navigate(`/study-groups/${id}/discussion`)}>
+              Group discussion
+            </Button>
+          )}
           {isCreator && <Button variant="danger" onClick={deleteGroup}>Delete group</Button>}
           <Button variant="ghost" onClick={() => navigate("/study-groups")}>Back</Button>
         </div>
@@ -112,7 +116,6 @@ export default function StudyGroupDetailPage() {
           </div>
         </div>}
       </div>
-      {group.membership_status === "member" && <div style={{ marginTop: 16 }}><GroupDiscussion groupId={id} /></div>}
     </AppShell>
   );
 }

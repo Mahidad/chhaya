@@ -25,5 +25,27 @@ class CodeVisualizationRepository(BaseRepository[CodeVisualization]):
             )
             return self._row_to_obj(cur.fetchone())
 
+    def find_identical(
+        self, db: psycopg.Connection, *, user_id: str, language: str, source_code: str
+    ) -> "CodeVisualization | None":
+        """The row this request would duplicate, if there is one.
+
+        Same reasoning as CodeConversionRepository.find_identical: tracing
+        the same code in the same language twice should refresh one row, not
+        stack up copies in whichever folder it was filed into. Oldest match
+        wins so the organised row is the one kept.
+        """
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT * FROM code_visualizations
+                WHERE user_id = %s AND language = %s AND source_code = %s
+                ORDER BY created_at ASC
+                LIMIT 1
+                """,
+                (user_id, language, source_code),
+            )
+            return self._row_to_obj(cur.fetchone())
+
 
 code_visualization_repository = CodeVisualizationRepository()

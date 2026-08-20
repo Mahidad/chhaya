@@ -37,6 +37,7 @@ import StudyGroupDetailPage from "./pages/study-groups/StudyGroupDetailPage";
 import ConceptMapsListPage from "./pages/concept-maps/ConceptMapsListPage";
 import GenerateConceptMapPage from "./pages/concept-maps/GenerateConceptMapPage";
 import ConceptMapGamePage from "./pages/concept-maps/ConceptMapGamePage";
+import StudyGroupDiscussionPage from "./pages/study-groups/StudyGroupDiscussionPage";
 
 /*
   Route list mirrors the sidebar nav in components/layout/Sidebar.jsx.
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/study-groups" element={<ProtectedRoute><StudyGroupsListPage /></ProtectedRoute>} />
             <Route path="/study-groups/new" element={<ProtectedRoute><CreateStudyGroupPage /></ProtectedRoute>} />
             <Route path="/study-groups/:id" element={<ProtectedRoute><StudyGroupDetailPage /></ProtectedRoute>} />
+            <Route path="/study-groups/:id/discussion" element={<ProtectedRoute><StudyGroupDiscussionPage /></ProtectedRoute>} />
 
             <Route path="/code-studio" element={<ProtectedRoute><CodeStudioPage /></ProtectedRoute>} />
             <Route path="/quizzes" element={<ProtectedRoute><QuizzesListPage /></ProtectedRoute>} />

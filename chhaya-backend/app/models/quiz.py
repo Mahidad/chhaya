@@ -9,10 +9,12 @@ class Quiz:
     id: str
     user_id: str
     chapter_id: str
+    note_id: str | None
     title: str
     difficulty: str
     num_questions: int
-    marks_per_question: int
+    min_marks: int
+    max_marks: int
     duration_minutes: int
     attempt_number: int
     status: str

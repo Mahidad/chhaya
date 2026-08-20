@@ -1,64 +1,95 @@
 """Gemini interaction for Module 3 Feature 7 – generating quiz questions.
 
-Pattern is identical to likely_question_generation_service.py:
+Flow:
   - Build a prompt
-  - Call Gemini (or return a mock if no key is set)
-  - Parse the JSON response
+  - Call Gemini with either plain text or a multimodal file (PDF/image)
+  - Parse the JSON response, clamping marks to [min_marks, max_marks]
   - Retry once if parsing fails
   - Raise ExternalServiceError on second failure
 """
 
+import base64
 import json
+import mimetypes
+import os
 
 from app.core.config import settings
 from app.utils.exceptions import ExternalServiceError
 
 
-# ── prompt ────────────────────────────────────────────────────────────────────
+# ── prompt instructions (shared by both text and multimodal paths) ────────────
 
-PROMPT_TEMPLATE = """You are a quiz generator for a student learning platform.
-Read the study notes below and generate exactly {num_questions} quiz questions.
+def _build_prompt(*, num_questions: int, min_marks: int, max_marks: int, difficulty: str, notes_text: str | None = None) -> str:
+    """
+    Build the quiz-generation prompt.
+
+    When notes_text is provided it is appended at the end (text path).
+    For multimodal calls, notes_text is omitted — Gemini reads the file instead.
+    """
+    rules = f"""You are a quiz generator for a student learning platform.
+Generate exactly {num_questions} quiz questions based on the study material provided.
 
 Rules:
 - Difficulty level for ALL questions must be: {difficulty}
-- Each question is worth {marks} marks
+- Each question must have an individual marks value between {min_marks} and {max_marks}
+- Assign higher marks to questions that are more complex or require deeper explanation
 - Question types should be short-answer or explain-in-your-own-words (no MCQ)
-- Base questions ONLY on the content in the notes below
+- Base questions ONLY on the content in the provided material
 
 Return ONLY valid JSON in exactly this shape (no extra text, no markdown fences):
 {{
   "questions": [
     {{
-      "question_text": "the question",
-      "marks": {marks},
+      "question_text": "a simpler question",
+      "marks": {min_marks},
+      "difficulty": "{difficulty}"
+    }},
+    {{
+      "question_text": "a more complex question requiring deeper explanation",
+      "marks": {max_marks},
       "difficulty": "{difficulty}"
     }}
   ]
-}}
+}}"""
 
-Student notes:
-{notes_text}
-"""
-
-
-# ── mock fallback (used when GEMINI_API_KEY is not set) ───────────────────────
-
-def _mock_questions(num_questions: int, marks: int, difficulty: str) -> list[dict]:
-    """Return placeholder questions so the rest of the feature still works locally."""
-    return [
-        {
-            "question_text": f"[Mock question {i + 1}] Explain a key concept from your notes in your own words.",
-            "marks": marks,
-            "difficulty": difficulty,
-        }
-        for i in range(num_questions)
-    ]
+    if notes_text:
+        return rules + f"\n\nStudent notes:\n{notes_text}\n"
+    return rules
 
 
-# ── JSON parsing ──────────────────────────────────────────────────────────────
+# ── file encoding helper ──────────────────────────────────────────────────────
 
-def _parse_questions(text: str) -> list[dict]:
-    """Strip markdown fences if present, then parse JSON and validate shape."""
+def _encode_file(file_path: str) -> tuple[str, bytes] | None:
+    """
+    Read a file from disk and return (mime_type, file_bytes).
+
+    Returns None if the file is missing or unreadable — caller should skip it.
+    The mime_type is guessed from the file extension:
+      .pdf   → application/pdf
+      .png   → image/png
+      .jpg   → image/jpeg
+      .jpeg  → image/jpeg
+      (others attempted via mimetypes module, fall back to application/octet-stream)
+    """
+    if not file_path or not os.path.exists(file_path):
+        return None
+    try:
+        with open(file_path, "rb") as f:
+            file_bytes = f.read()
+    except OSError:
+        return None
+
+    # Guess the mime type from the extension
+    guessed, _ = mimetypes.guess_type(file_path)
+    mime_type = guessed or "application/octet-stream"
+
+    return mime_type, file_bytes
+
+
+# ── JSON parsing (shared) ─────────────────────────────────────────────────────
+
+def _parse_questions(text: str, min_marks: int, max_marks: int) -> list[dict]:
+    """Strip markdown fences if present, parse JSON, validate shape, clamp marks to range."""
     cleaned = text.strip()
 
     # Gemini sometimes wraps the JSON in ```json ... ```
@@ -75,50 +106,121 @@ def _parse_questions(text: str) -> list[dict]:
     for q in data["questions"]:
         if not q.get("question_text") or q.get("marks") is None:
             raise ValueError("A question is missing required fields.")
+        # Clamp marks to [min_marks, max_marks] instead of rejecting the whole batch
+        q["marks"] = max(min_marks, min(max_marks, int(q["marks"])))
 
     return data["questions"]
 
 
-# ── main entry point ──────────────────────────────────────────────────────────
+# ── Gemini model helper ───────────────────────────────────────────────────────
+
+def _get_model():
+    import google.generativeai as genai
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    return genai.GenerativeModel(settings.GEMINI_MODEL)
+
+
+# ── text-based generation ─────────────────────────────────────────────────────
 
 def generate_questions(
     *,
     notes_text: str,
     num_questions: int,
-    marks_per_question: int,
+    min_marks: int,
+    max_marks: int,
     difficulty: str,
 ) -> list[dict]:
     """
-    Call Gemini to generate quiz questions from notes text.
+    Call Gemini with plain text notes to generate quiz questions.
+    Marks vary per question within [min_marks, max_marks].
     Retries the parse once if the first attempt fails.
-    Falls back to mock questions if no API key is configured.
+    Raises ExternalServiceError if Gemini is unavailable or both attempts fail.
     """
-    if not settings.GEMINI_API_KEY:
-        return _mock_questions(num_questions, marks_per_question, difficulty)
-
-    prompt = PROMPT_TEMPLATE.format(
+    model = _get_model()
+    prompt = _build_prompt(
         num_questions=num_questions,
         difficulty=difficulty,
-        marks=marks_per_question,
+        min_marks=min_marks,
+        max_marks=max_marks,
         notes_text=notes_text,
     )
-
-    import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     # First attempt
     try:
         response = model.generate_content(prompt)
-        return _parse_questions(response.text)
+        return _parse_questions(response.text, min_marks, max_marks)
     except (ValueError, json.JSONDecodeError):
         pass  # parsing failed, try once more
 
     # Second attempt (one retry)
     try:
         response = model.generate_content(prompt)
-        return _parse_questions(response.text)
+        return _parse_questions(response.text, min_marks, max_marks)
     except Exception as exc:
         raise ExternalServiceError(
             f"Gemini quiz generation failed after retry: {exc}"
+        ) from exc
+
+
+# ── multimodal generation (PDF / image notes) ─────────────────────────────────
+
+def generate_questions_from_file(
+    *,
+    file_path: str,
+    num_questions: int,
+    min_marks: int,
+    max_marks: int,
+    difficulty: str,
+) -> list[dict]:
+    """
+    Call Gemini with a PDF or image file to generate quiz questions.
+
+    The file is base64-encoded and sent as an inline multimodal part alongside
+    the text prompt instructions.  Same retry-once-then-raise behavior as
+    the text path — no mock fallback.
+
+    Raises ValueError if the file cannot be read before even calling Gemini.
+    Raises ExternalServiceError if Gemini fails after retry.
+    """
+    encoded = _encode_file(file_path)
+    if encoded is None:
+        raise ValueError(
+            f"Could not read the note file from disk. "
+            "Please re-upload the note and try again."
+        )
+
+    mime_type, file_bytes = encoded
+    model = _get_model()
+    prompt_text = _build_prompt(
+        num_questions=num_questions,
+        difficulty=difficulty,
+        min_marks=min_marks,
+        max_marks=max_marks,
+    )
+
+    # Gemini multimodal content: one inline file part + the prompt text
+    content = [
+        {
+            "inline_data": {
+                "mime_type": mime_type,
+                "data": base64.b64encode(file_bytes).decode("utf-8"),
+            }
+        },
+        prompt_text,
+    ]
+
+    # First attempt
+    try:
+        response = model.generate_content(content)
+        return _parse_questions(response.text, min_marks, max_marks)
+    except (ValueError, json.JSONDecodeError):
+        pass  # parsing failed, try once more
+
+    # Second attempt (one retry)
+    try:
+        response = model.generate_content(content)
+        return _parse_questions(response.text, min_marks, max_marks)
+    except Exception as exc:
+        raise ExternalServiceError(
+            f"Gemini multimodal quiz generation failed after retry: {exc}"
         ) from exc

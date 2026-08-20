@@ -33,4 +33,9 @@ edge-tts>=6.1
 # NOTE: this was already imported by app/utils/dictionary.py but had
 # never actually been added here -- fixed while touching this file again.
 # after installing, run once: python -m nltk.downloader punkt averaged_perceptron_tagger wordnet
-nltk>=3.8
+nltk>=3.8
+
+# practice problem bank import (scripts/import_practice_problems.py --kaggle)
+# One-time importer, not used by the API at runtime. Needs Kaggle API
+# credentials: ~/.kaggle/kaggle.json, or KAGGLE_USERNAME + KAGGLE_KEY.
+kagglehub>=1.0

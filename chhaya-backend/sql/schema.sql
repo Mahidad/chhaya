@@ -269,6 +269,15 @@ ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NU
 
 CREATE INDEX IF NOT EXISTS idx_code_conversions_folder_id ON code_conversions (folder_id);
 
+-- Add title/is_favorite to tables created before the folder system existed.
+-- CREATE TABLE IF NOT EXISTS above is a no-op on an existing table, so a
+-- database built before those columns were added never gained them, and
+-- PATCHing a conversion's name failed with "column title does not exist"
+-- while the read path quietly reported title=NULL (the dataclass defaults
+-- it). code_visualizations was created later and already has both.
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE code_conversions ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ---------------------------------------------------------------------------
 -- code_visualizations
 -- Code Studio's third part: an AI-narrated step-by-step execution trace
@@ -473,24 +482,6 @@ CREATE TABLE IF NOT EXISTS highlights (
 CREATE INDEX IF NOT EXISTS idx_highlights_content ON highlights (content_type, content_id);
 
 -- ---------------------------------------------------------------------------
--- sticky_notes  (Module 2 – Lamia)
--- Short free-text annotations anchored to content inside a chapter.
--- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS sticky_notes (
-    id           TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    user_id      TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    chapter_id   TEXT        NOT NULL REFERENCES chapters (id) ON DELETE CASCADE,
-    content_type TEXT        NOT NULL,
-    content_id   TEXT        NOT NULL,
-    body         TEXT        NOT NULL,
-    anchor_text  TEXT,
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_sticky_notes_content ON sticky_notes (content_type, content_id);
-
--- ---------------------------------------------------------------------------
 -- glossary_entries  (Module 2 – Lamia)
 -- Personal vocabulary list per chapter, entries sourced from WordNet or custom.
 -- ---------------------------------------------------------------------------
@@ -507,7 +498,9 @@ CREATE TABLE IF NOT EXISTS glossary_entries (
 
 CREATE INDEX IF NOT EXISTS idx_glossary_entries_chapter_id ON glossary_entries (chapter_id);
 
--- Module 2 fix -- 2026-08-12: sticky notes removed as a feature.
+-- Module 2 fix -- 2026-08-12: sticky notes removed as a feature. The CREATE
+-- that used to sit above glossary_entries is gone; this DROP stays so that
+-- databases created before that date lose the table on the next schema run.
 DROP TABLE IF EXISTS sticky_notes;
 
 -- ---------------------------------------------------------------------------
@@ -535,6 +528,26 @@ CREATE TABLE IF NOT EXISTS practice_problems (
 
 CREATE INDEX IF NOT EXISTS idx_practice_problems_difficulty ON practice_problems (difficulty);
 CREATE INDEX IF NOT EXISTS idx_practice_problems_title_slug ON practice_problems (title_slug);
+
+-- Practice import fix -- 2026-08-19: the importer's slugify gave every
+-- non-alphanumeric its own dash, so "Pow(x, n)" landed as "pow-x--n" instead
+-- of "pow-x-n". Those don't match leetcode.com/problems/<slug>, and title_slug
+-- is the importer's dedup key, so a re-import would have duplicated the 25
+-- affected rows rather than skipping them. Collapse the runs; verified
+-- collision-free against the 1825-row import, so the UNIQUE index holds.
+UPDATE practice_problems
+SET    title_slug = trim(both '-' from regexp_replace(title_slug, '-+', '-', 'g'))
+WHERE  title_slug LIKE '%--%';
+
+-- Practice import fix -- 2026-08-19: LeetCode's database problems ship in the
+-- Kaggle dataset with the literal string "SQL Schema" where the problem
+-- statement should be (the real prompt is an image on leetcode.com and never
+-- made it into the CSV), which renders as a blank practice card. Drops 156 of
+-- 1825 rows. practice_attempts cascades from here, but no attempt referenced
+-- one of these. The importer now rejects them at read time
+-- (PLACEHOLDER_DESC_LEN), so a re-import won't reintroduce them.
+DELETE FROM practice_problems
+WHERE  length(btrim(description)) < 50;
 
 -- ---------------------------------------------------------------------------
 -- practice_attempts
@@ -580,7 +593,6 @@ CREATE TABLE IF NOT EXISTS quizzes (
     title              TEXT        NOT NULL,
     difficulty         TEXT        NOT NULL,
     num_questions      INTEGER     NOT NULL,
-    marks_per_question INTEGER     NOT NULL,
     duration_minutes   INTEGER     NOT NULL,
     attempt_number     INTEGER     NOT NULL DEFAULT 1,
     status             TEXT        NOT NULL DEFAULT 'not_started',
@@ -700,3 +712,11 @@ CREATE TABLE IF NOT EXISTS concept_map_attempts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_concept_map_attempts_map_id ON concept_map_attempts (concept_map_id);
+
+-- Feature 7 marks range (replaces marks_per_question)
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS min_marks INTEGER;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS max_marks INTEGER;
+
+-- Feature 7 note-based generation (each quiz is now tied to a specific note)
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS note_id TEXT REFERENCES notes(id) ON DELETE SET NULL;
+ALTER TABLE quizzes DROP COLUMN IF EXISTS marks_per_question;

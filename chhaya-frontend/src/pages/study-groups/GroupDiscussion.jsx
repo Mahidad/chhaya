@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import Button from "../ui/Button";
-import Icon from "../icons/Icon";
+import Button from "../../components/ui/Button";
+import Icon from "../../components/icons/Icon";
 import {
   listGroupMessages,
   postGroupMessage,

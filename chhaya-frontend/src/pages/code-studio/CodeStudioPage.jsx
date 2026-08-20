@@ -74,17 +74,25 @@ export default function CodeStudioPage() {
   }
 
   function refreshSavedItems() {
-    Promise.all([listConversions(), listVisualizations()]).then(([conversions, visualizations]) => {
-      const tagged = [
-        ...conversions.map((c) => ({ ...c, _kind: "conversion" })),
-        ...visualizations.map((v) => ({ ...v, _kind: "visualization" })),
-      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setSavedItems(tagged);
-    });
+    Promise.all([listConversions(), listVisualizations()])
+      .then(([conversions, visualizations]) => {
+        const tagged = [
+          ...conversions.map((c) => ({ ...c, _kind: "conversion" })),
+          ...visualizations.map((v) => ({ ...v, _kind: "visualization" })),
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setSavedItems(tagged);
+      })
+      .catch(() => setSavedItems([]));
   }
 
+  // Runs on mount as well as on every view change. It used to be guarded by
+  // `if (view !== "working")`, which meant nothing was fetched on first paint
+  // -- but FolderSidebar shows a count next to Unfiled and next to every
+  // folder at all times, and those counts come from this data. So they all
+  // rendered 0 until you clicked into a saved view, then reset to 0 on the
+  // next reload because `view` starts at "working" again.
   useEffect(() => {
-    if (view !== "working") refreshSavedItems();
+    refreshSavedItems();
   }, [view]);
 
   const itemCounts = savedItemCounts(savedItems, folders);
@@ -157,16 +165,33 @@ export default function CodeStudioPage() {
     setActiveMapping(block || null);
   }
 
+  // Both of these refresh the saved list as well as the folder list. Filing
+  // or renaming changes which folder an item counts towards, and without the
+  // refetch the sidebar counts and the Unfiled list kept showing the item
+  // where it used to be. The catch matters too: these used to reject
+  // silently, so a failed PATCH looked identical to "nothing happened".
   async function handleUpdateConversion(changes) {
-    const updated = await updateConversion(conversionResult.id, changes);
-    setConversionResult(updated);
-    refreshFolders();
+    try {
+      const updated = await updateConversion(conversionResult.id, changes);
+      setConversionResult(updated);
+      refreshFolders();
+      refreshSavedItems();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Could not save that change.");
+      throw err;
+    }
   }
 
   async function handleUpdateVisualization(changes) {
-    const updated = await updateVisualization(visualizationResult.id, changes);
-    setVisualizationResult(updated);
-    refreshFolders();
+    try {
+      const updated = await updateVisualization(visualizationResult.id, changes);
+      setVisualizationResult(updated);
+      refreshFolders();
+      refreshSavedItems();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Could not save that change.");
+      throw err;
+    }
   }
 
   function openSavedItem(item) {
@@ -198,13 +223,13 @@ export default function CodeStudioPage() {
 
   const canSubmit =
     mode === "translate" ? sourceCode.trim().length > 0 :
-    mode === "solve" ? problemStatement.trim().length > 0 :
-    visualizeSource.trim().length > 0;
+      mode === "solve" ? problemStatement.trim().length > 0 :
+        visualizeSource.trim().length > 0;
 
   const currentStep = visualizationResult?.trace?.[stepIndex] || null;
 
   return (
-    <AppShell section="Code Studio" current={{ translate: "Translate", solve: "Solve", visualize: "Visualize", practice: "Practice", dashboard: "Dashboard" }[mode]}>
+    <AppShell section="Code Studio" current={{ translate: "Converter", solve: "Solve", visualize: "Visualize", practice: "Practice", dashboard: "Dashboard" }[mode]}>
       <div className="page-head">
         <div>
           <div className="page-title">Code Studio</div>
@@ -232,8 +257,11 @@ export default function CodeStudioPage() {
           ) : (
             <div className="conv-shell">
               <div className="conv-mode-bar">
+                <button className={`mode-btn ${mode === "dashboard" ? "mode-btn-on" : ""}`} onClick={() => switchMode("dashboard")}>
+                  <Icon name="overview" size={15} /> Dashboard
+                </button>
                 <button className={`mode-btn ${mode === "translate" ? "mode-btn-on" : ""}`} onClick={() => switchMode("translate")}>
-                  <Icon name="swap" size={15} /> Translate
+                  <Icon name="swap" size={15} /> Code Converter
                 </button>
                 <button className={`mode-btn ${mode === "solve" ? "mode-btn-on" : ""}`} onClick={() => switchMode("solve")}>
                   <Icon name="wand" size={15} /> Solve
@@ -243,9 +271,6 @@ export default function CodeStudioPage() {
                 </button>
                 <button className={`mode-btn ${mode === "practice" ? "mode-btn-on" : ""}`} onClick={() => switchMode("practice")}>
                   <Icon name="exams" size={15} /> Practice
-                </button>
-                <button className={`mode-btn ${mode === "dashboard" ? "mode-btn-on" : ""}`} onClick={() => switchMode("dashboard")}>
-                  <Icon name="overview" size={15} /> Dashboard
                 </button>
               </div>
 
@@ -374,6 +399,34 @@ function SavedItemsList({ items, onOpen, onDelete }) {
 
 function SaveControls({ item, onUpdate, folders }) {
   const [title, setTitle] = useState(item.title || "");
+  // Picking a folder no longer files the item on its own -- it stages the
+  // choice until "File" is pressed, so browsing the dropdown can't move
+  // something by accident.
+  const [pendingFolderId, setPendingFolderId] = useState(item.folder_id || "");
+  const [saving, setSaving] = useState(false);
+
+  // These inputs are local state seeded from props, so they'd otherwise keep
+  // showing the PREVIOUS item's name and folder after opening a different
+  // one from the sidebar -- and then write that stale name onto the new item
+  // on blur. Re-seed whenever the item, or its saved values, change.
+  useEffect(() => {
+    setTitle(item.title || "");
+    setPendingFolderId(item.folder_id || "");
+  }, [item.id, item.title, item.folder_id]);
+
+  const folderDirty = (item.folder_id || "") !== pendingFolderId;
+
+  async function commitFolder() {
+    if (!folderDirty) return;
+    setSaving(true);
+    try {
+      await onUpdate({ folder_id: pendingFolderId || null });
+    } catch {
+      setPendingFolderId(item.folder_id || ""); // put the dropdown back
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="save-controls">
@@ -382,16 +435,24 @@ function SaveControls({ item, onUpdate, folders }) {
         placeholder="Untitled -- click to name this"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        onBlur={() => title !== (item.title || "") && onUpdate({ title })}
+        onBlur={() => title !== (item.title || "") && onUpdate({ title }).catch(() => setTitle(item.title || ""))}
       />
       <select
         className="conv-select"
-        value={item.folder_id || ""}
-        onChange={(e) => onUpdate({ folder_id: e.target.value || null })}
+        value={pendingFolderId}
+        onChange={(e) => setPendingFolderId(e.target.value)}
       >
         <option value="">Unfiled</option>
         {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
       </select>
+      <Button
+        variant="secondary"
+        onClick={commitFolder}
+        disabled={!folderDirty || saving}
+        title={folderDirty ? "Move this into the selected folder" : "Already filed here"}
+      >
+        {saving ? "Filing..." : "File"}
+      </Button>
       <button
         className="mini-btn"
         onClick={() => onUpdate({ is_favorite: !item.is_favorite })}
@@ -515,7 +576,7 @@ function VisualizePane({ source, setSource, language, setLanguage, result, stepI
           </select>
         </div>
         {result?.status === "ready" ? (
-          <CodeLines code={source} activeRange={currentStep && currentStep.line > 0 ? [currentStep.line, currentStep.line] : null} onLineClick={() => {}} />
+          <CodeLines code={source} activeRange={currentStep && currentStep.line > 0 ? [currentStep.line, currentStep.line] : null} onLineClick={() => { }} />
         ) : (
           <textarea className="conv-textarea" placeholder="Paste code to trace, or use 'Visualize this' from Translate/Solve..."
             value={source} onChange={(e) => setSource(e.target.value)} spellCheck={false} />

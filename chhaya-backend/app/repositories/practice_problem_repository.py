@@ -19,6 +19,38 @@ class PracticeProblemRepository(BaseRepository[PracticeProblem]):
             )
             return [self._row_to_obj(row) for row in cur.fetchall()]
 
+    def list_unsolved_for_user(
+        self, db: psycopg.Connection, *, user_id: str, difficulty: str, limit: int = 200
+    ) -> list[PracticeProblem]:
+        """Candidate pool for suggestions: problems at this difficulty that
+        the student has NOT already solved correctly.
+
+        The exclusion has to happen in SQL, not by filtering the result of
+        list_by_difficulty in Python. That version took the first N rows of
+        the whole bank and then removed solved ones, so the pool shrank as
+        the student made progress and eventually came back empty -- at which
+        point the caller fell back to showing solved problems again. Doing
+        it here means the pool is always N genuinely unsolved problems drawn
+        from the entire bank.
+        """
+        with db.cursor(row_factory=dict_row) as cur:
+            cur.execute(
+                """
+                SELECT pp.* FROM practice_problems pp
+                WHERE pp.difficulty = %s
+                  AND NOT EXISTS (
+                      SELECT 1 FROM practice_attempts pa
+                      WHERE pa.problem_id = pp.id
+                        AND pa.user_id = %s
+                        AND pa.is_correct = TRUE
+                  )
+                ORDER BY pp.title
+                LIMIT %s
+                """,
+                (difficulty, user_id, limit),
+            )
+            return [self._row_to_obj(row) for row in cur.fetchall()]
+
     def get_by_slug(self, db: psycopg.Connection, *, title_slug: str) -> PracticeProblem | None:
         with db.cursor(row_factory=dict_row) as cur:
             cur.execute("SELECT * FROM practice_problems WHERE title_slug = %s", (title_slug,))

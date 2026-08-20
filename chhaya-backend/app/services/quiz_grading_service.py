@@ -71,16 +71,6 @@ def _parse_grade(text: str, max_marks: int) -> dict:
     return {"marks_obtained": marks, "feedback": str(feedback)}
 
 
-# ── mock fallback ─────────────────────────────────────────────────────────────
-
-def _mock_grade(max_marks: int) -> dict:
-    """Fake grade returned when no API key is set — gives half marks."""
-    return {
-        "marks_obtained": max_marks // 2,
-        "feedback": "[Mock] No GEMINI_API_KEY set. Half marks awarded as placeholder.",
-    }
-
-
 # ── grade one answer ──────────────────────────────────────────────────────────
 
 def grade_one_answer(
@@ -93,8 +83,6 @@ def grade_one_answer(
     Retries once on parse failure. Returns {0, "Evaluation failed"} on
     second failure so the rest of the quiz is not blocked.
     """
-    if not settings.GEMINI_API_KEY:
-        return _mock_grade(max_marks)
 
     import google.generativeai as genai
     genai.configure(api_key=settings.GEMINI_API_KEY)

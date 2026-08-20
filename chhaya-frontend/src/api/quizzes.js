@@ -3,12 +3,13 @@
 import client from "./client";
 
 
-/** Generate a quiz from notes for a chapter. Returns quiz + questions. */
-export async function generateQuiz(chapterId, numQuestions, marksPerQuestion, difficulty) {
+/** Generate a quiz from a single note (text, PDF, or image). Returns quiz + questions. */
+export async function generateQuiz(noteId, numQuestions, minMarks, maxMarks, difficulty) {
   const { data } = await client.post("/quizzes/generate", {
-    chapter_id: chapterId,
+    note_id: noteId,
     num_questions: numQuestions,
-    marks_per_question: marksPerQuestion,
+    min_marks: minMarks,
+    max_marks: maxMarks,
     difficulty: difficulty,
   });
   return data;

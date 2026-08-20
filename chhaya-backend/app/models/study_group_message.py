@@ -12,3 +12,6 @@ class StudyGroupMessage:
     content: str
     is_pinned: bool
     created_at: datetime
+    pinned_by_user_id: str | None = None
+    author_name: str | None = None
+    pinned_by_name: str | None = None
