@@ -18,6 +18,7 @@ model is most likely to wave through subtly broken code.
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 MATCH_PROMPT_TEMPLATE = """A student has been working on the code below. Recommend which practice
@@ -82,12 +83,8 @@ Respond with ONLY a JSON object (no markdown, no commentary):
 
 
 def _call_gemini(prompt: str) -> dict:
-    import google.generativeai as genai
-
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(prompt)
-    text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+    response_text = gemini.generate_text(prompt)
+    text = response_text.strip().removeprefix("```json").removesuffix("```").strip()
     return json.loads(text)
 
 

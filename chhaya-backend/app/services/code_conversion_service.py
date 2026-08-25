@@ -24,6 +24,7 @@ without a key.
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 TRANSLATE_PROMPT_TEMPLATE = """You are a programming tutor helping a student learn {target_language} by
@@ -131,12 +132,8 @@ def _mock_solution(problem_statement: str, target_language: str) -> dict:
 
 
 def _call_gemini(prompt: str) -> dict:
-    import google.generativeai as genai
-
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
-    response = model.generate_content(prompt)
-    text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+    response_text = gemini.generate_text(prompt)
+    text = response_text.strip().removeprefix("```json").removesuffix("```").strip()
     return json.loads(text)
 
 

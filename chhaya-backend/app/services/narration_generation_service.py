@@ -25,6 +25,7 @@ claim of matching tone or comedic timing.
 """
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 NARRATION_REWRITE_PROMPT = """Rewrite the following study material so it
@@ -79,10 +80,6 @@ def rewrite_for_narration(*, text: str, style: dict) -> str:
     if not settings.GEMINI_API_KEY:
         return _mock_rewrite(text)
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
         prompt = NARRATION_REWRITE_PROMPT.format(
             pacing=style.get("pacing", "moderate"),
             vocabulary_level=style.get("vocabulary_level", "intermediate"),
@@ -91,7 +88,7 @@ def rewrite_for_narration(*, text: str, style: dict) -> str:
             signature_phrases=", ".join(style.get("signature_phrases") or []) or "none noted",
             text=text[:12000],  # token-budget guard, same idea as teaching_style_service.py
         )
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        response_text = gemini.generate_text(prompt)
+        return response_text.strip()
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini narration rewrite failed: {exc}") from exc

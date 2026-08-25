@@ -15,7 +15,9 @@ psycopg[binary,pool]>=3.1
 
 # reference source ingestion (Group 1 / Mahidad)
 youtube-transcript-api>=0.6
-google-generativeai>=0.5
+# google-genai, NOT the retired google-generativeai: Google ended support for
+# that package. All calls go through app/utils/gemini.py.
+google-genai>=1.0
 yt-dlp>=2024.1
 
 # OCR is performed through OCR.Space's HTTP API using Python's standard library.

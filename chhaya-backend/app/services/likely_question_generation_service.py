@@ -3,6 +3,7 @@
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 
@@ -81,12 +82,9 @@ def analyze_and_predict(*, papers: list[dict], question_count: int) -> dict:
             f"--- {paper['title']} ---\n{paper['extracted_text']}"
             for paper in papers
         )
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        response = genai.GenerativeModel(settings.GEMINI_MODEL).generate_content(
+        response_text = gemini.generate_text(
             PROMPT_TEMPLATE.format(papers=paper_text[:45000], question_count=question_count)
         )
-        return _parse_json(response.text)
+        return _parse_json(response_text)
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini likely-question generation failed: {exc}") from exc

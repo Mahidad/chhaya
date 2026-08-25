@@ -18,6 +18,7 @@ After all questions are graded, backend arithmetic calculates:
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 
@@ -84,23 +85,20 @@ def grade_one_answer(
     second failure so the rest of the quiz is not blocked.
     """
 
-    import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     prompt = _build_prompt(question_text, max_marks, answer_text)
 
     # First attempt
     try:
-        response = model.generate_content(prompt)
-        return _parse_grade(response.text, max_marks)
+        response_text = gemini.generate_text(prompt)
+        return _parse_grade(response_text, max_marks)
     except (ValueError, json.JSONDecodeError, Exception):
         pass  # parsing failed — try once more
 
     # Second attempt (one retry)
     try:
-        response = model.generate_content(prompt)
-        return _parse_grade(response.text, max_marks)
+        response_text = gemini.generate_text(prompt)
+        return _parse_grade(response_text, max_marks)
     except Exception:
         # Return 0 marks for this question rather than failing the whole quiz
         return {"marks_obtained": 0, "feedback": "Evaluation failed for this question."}

@@ -8,12 +8,12 @@ Flow:
   - Raise ExternalServiceError on second failure
 """
 
-import base64
 import json
 import mimetypes
 import os
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 
@@ -112,13 +112,6 @@ def _parse_questions(text: str, min_marks: int, max_marks: int) -> list[dict]:
     return data["questions"]
 
 
-# ── Gemini model helper ───────────────────────────────────────────────────────
-
-def _get_model():
-    import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    return genai.GenerativeModel(settings.GEMINI_MODEL)
-
 
 # ── text-based generation ─────────────────────────────────────────────────────
 
@@ -136,7 +129,6 @@ def generate_questions(
     Retries the parse once if the first attempt fails.
     Raises ExternalServiceError if Gemini is unavailable or both attempts fail.
     """
-    model = _get_model()
     prompt = _build_prompt(
         num_questions=num_questions,
         difficulty=difficulty,
@@ -147,15 +139,15 @@ def generate_questions(
 
     # First attempt
     try:
-        response = model.generate_content(prompt)
-        return _parse_questions(response.text, min_marks, max_marks)
+        response_text = gemini.generate_text(prompt)
+        return _parse_questions(response_text, min_marks, max_marks)
     except (ValueError, json.JSONDecodeError):
         pass  # parsing failed, try once more
 
     # Second attempt (one retry)
     try:
-        response = model.generate_content(prompt)
-        return _parse_questions(response.text, min_marks, max_marks)
+        response_text = gemini.generate_text(prompt)
+        return _parse_questions(response_text, min_marks, max_marks)
     except Exception as exc:
         raise ExternalServiceError(
             f"Gemini quiz generation failed after retry: {exc}"
@@ -175,8 +167,8 @@ def generate_questions_from_file(
     """
     Call Gemini with a PDF or image file to generate quiz questions.
 
-    The file is base64-encoded and sent as an inline multimodal part alongside
-    the text prompt instructions.  Same retry-once-then-raise behavior as
+    The file is sent as an inline multimodal part alongside the text prompt
+    instructions.  Same retry-once-then-raise behavior as
     the text path — no mock fallback.
 
     Raises ValueError if the file cannot be read before even calling Gemini.
@@ -190,7 +182,6 @@ def generate_questions_from_file(
         )
 
     mime_type, file_bytes = encoded
-    model = _get_model()
     prompt_text = _build_prompt(
         num_questions=num_questions,
         difficulty=difficulty,
@@ -198,28 +189,25 @@ def generate_questions_from_file(
         max_marks=max_marks,
     )
 
-    # Gemini multimodal content: one inline file part + the prompt text
+    # Gemini multimodal content: one inline file part + the prompt text.
+    # file_part takes RAW bytes -- the SDK base64-encodes internally, so
+    # encoding here first would send the model a picture of base64.
     content = [
-        {
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": base64.b64encode(file_bytes).decode("utf-8"),
-            }
-        },
+        gemini.file_part(data=file_bytes, mime_type=mime_type),
         prompt_text,
     ]
 
     # First attempt
     try:
-        response = model.generate_content(content)
-        return _parse_questions(response.text, min_marks, max_marks)
+        response_text = gemini.generate_text(content)
+        return _parse_questions(response_text, min_marks, max_marks)
     except (ValueError, json.JSONDecodeError):
         pass  # parsing failed, try once more
 
     # Second attempt (one retry)
     try:
-        response = model.generate_content(content)
-        return _parse_questions(response.text, min_marks, max_marks)
+        response_text = gemini.generate_text(content)
+        return _parse_questions(response_text, min_marks, max_marks)
     except Exception as exc:
         raise ExternalServiceError(
             f"Gemini multimodal quiz generation failed after retry: {exc}"

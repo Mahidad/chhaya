@@ -30,6 +30,7 @@ written to get as close to "actually correct" as prompting can achieve:
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 VISUALIZE_PROMPT_TEMPLATE = """You are simulating the EXACT execution of the following {language} program,
@@ -104,13 +105,9 @@ def generate_trace(*, source_code: str, language: str) -> dict:
         return _mock_trace(source_code, language)
 
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
         prompt = VISUALIZE_PROMPT_TEMPLATE.format(language=language, source_code=source_code[:8000])
-        response = model.generate_content(prompt)
-        text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+        response_text = gemini.generate_text(prompt)
+        text = response_text.strip().removeprefix("```json").removesuffix("```").strip()
         return json.loads(text)
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini trace generation failed: {exc}") from exc

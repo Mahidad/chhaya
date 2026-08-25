@@ -19,6 +19,7 @@ download endpoint are the two natural next additions here.
 """
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 
 GUIDE_PROMPT_TEMPLATE = """You are writing a study guide chapter on "{topic}"
@@ -86,10 +87,6 @@ def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
     if not settings.GEMINI_API_KEY:
         return _mock_guide(topic, depth)
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
         prompt = GUIDE_PROMPT_TEMPLATE.format(
             topic=topic,
             depth=depth,
@@ -99,8 +96,8 @@ def generate_guide_text(*, topic: str, depth: str, style: dict) -> str:
             example_density=style.get("example_density", "medium"),
             sequencing_notes=style.get("concept_sequencing_notes", "not specified"),
         )
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        response_text = gemini.generate_text(prompt)
+        return response_text.strip()
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini guide generation failed: {exc}") from exc
 
@@ -109,12 +106,8 @@ def generate_formula_sheet(*, topic: str) -> str:
     if not settings.GEMINI_API_KEY:
         return _mock_formula_sheet(topic)
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
-        response = model.generate_content(FORMULA_SHEET_PROMPT_TEMPLATE.format(topic=topic))
-        return response.text.strip()
+        response_text = gemini.generate_text(FORMULA_SHEET_PROMPT_TEMPLATE.format(topic=topic))
+        return response_text.strip()
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini formula sheet generation failed: {exc}") from exc
 
@@ -123,11 +116,7 @@ def generate_bangla_translation(*, text: str) -> str:
     if not settings.GEMINI_API_KEY:
         return f"## বাংলা সংস্করণ (মক)\n\n{text}\n\n*(বাংলা অনুবাদ প্রস্তুত রয়েছে)*"
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
-        response = model.generate_content(BANGLA_TRANSLATION_PROMPT.format(text=text[:10000]))
-        return response.text.strip()
+        response_text = gemini.generate_text(BANGLA_TRANSLATION_PROMPT.format(text=text[:10000]))
+        return response_text.strip()
     except Exception as exc:  # noqa: BLE001
         raise ExternalServiceError(f"Gemini Bangla translation failed: {exc}") from exc

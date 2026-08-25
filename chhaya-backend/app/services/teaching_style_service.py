@@ -16,6 +16,7 @@ GEMINI_API_KEY in .env; no other file needs to change.
 import json
 
 from app.core.config import settings
+from app.utils import gemini
 from app.utils.exceptions import ExternalServiceError
 from app.utils.tts import AVAILABLE_VOICES, DEFAULT_VOICE
 
@@ -70,17 +71,13 @@ def analyze_style(transcript_text: str, channel_name: str | None = None) -> dict
         return _mock_style_profile(transcript_text)
 
     try:
-        import google.generativeai as genai
-
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel(settings.GEMINI_MODEL)
         prompt = STYLE_PROMPT_TEMPLATE.format(
             transcript=transcript_text[:15000],
             channel_name=channel_name or "unknown",
             voice_choices=_VOICE_CHOICES,
         )
-        response = model.generate_content(prompt)
-        text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+        response_text = gemini.generate_text(prompt)
+        text = response_text.strip().removeprefix("```json").removesuffix("```").strip()
         style = json.loads(text)
         # Gemini can hallucinate an id outside the list we gave it --
         # never trust free-form model output as a value that's about to
