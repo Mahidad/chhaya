@@ -15,7 +15,10 @@ services:
     runtime: python
     plan: starter
     rootDir: chhaya-backend
-    buildCommand: pip install -r requirements.txt
+    # The WordNet corpus is a separate ~10MB download that `pip install nltk`
+    # does not fetch. Without it the glossary silently falls back to mock
+    # definitions, so pull it during the build.
+    buildCommand: pip install -r requirements.txt && python -m nltk.downloader wordnet omw-1.4
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     disk:
@@ -45,6 +48,17 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.0-flash
+      # OCR.Space extracts text from uploaded exam papers and image notes.
+      # Free key: ocr.space/ocrapi -> Register. Without it every upload fails
+      # with "OCR.Space is not configured".
+      - key: OCR_SPACE_API_KEY
+        sync: false
+      # Resend sends the review reminder emails. Optional -- review schedules
+      # still work without it, the emails just report as skipped.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
       # The weekly refresh is owned by the cron job below, so the web
       # service does not need to do it. Flip to "true" only if you are on a
       # plan without cron jobs -- then the API refreshes on startup instead,

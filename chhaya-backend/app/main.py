@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -64,3 +65,36 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 @app.get("/health", tags=["health"])
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/health/integrations", tags=["health"])
+def integrations_check():
+    """Which external services this instance is configured to reach.
+
+    Booleans only -- never the keys themselves. Exists because "the external
+    APIs stopped working after deploying" is almost always one unset
+    environment variable, and reading it off a running instance beats
+    guessing from a dashboard.
+
+    `false` means the feature falls back to a mock or refuses the request;
+    `true` means a key is present, NOT that the remote service is healthy or
+    that the key is valid.
+    """
+    try:
+        from app.utils.dictionary import _ensure_wordnet
+
+        wordnet = _ensure_wordnet()
+    except Exception:
+        wordnet = False
+
+    return {
+        "env": settings.ENV,
+        "database": "localhost" not in settings.DATABASE_URL,
+        "gemini": bool(settings.GEMINI_API_KEY),
+        "gemini_model": settings.GEMINI_MODEL,
+        "ocr_space": bool(settings.OCR_SPACE_API_KEY),
+        "resend_email": bool(settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL),
+        "kaggle": bool(os.getenv("KAGGLE_USERNAME") and os.getenv("KAGGLE_KEY")),
+        "wordnet_corpus": wordnet,
+        "upload_root": settings.UPLOAD_ROOT,
+    }
