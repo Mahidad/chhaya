@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 fastapi>=0.111
 uvicorn[standard]>=0.30
 pydantic>=2.7
@@ -12,59 +11,23 @@ passlib[bcrypt]>=1.7
 bcrypt==4.0.1
 
 # database — psycopg v3 with binary C extension + connection pool
-# "binary" provides the compiled C extension for performance;
-# "pool"   installs psycopg-pool (imported as psycopg_pool).
 psycopg[binary,pool]>=3.1
 
 # reference source ingestion (Group 1 / Mahidad)
 youtube-transcript-api>=0.6
 google-generativeai>=0.5
-yt-dlp>=2024.1   # playlist enumeration - see app/utils/youtube_playlist.py
+yt-dlp>=2024.1
 
-# ocr
-pytesseract>=0.3
-Pillow>=10.0
-pdf2image>=1.17.0
+# OCR is performed through OCR.Space's HTTP API using Python's standard library.
+# No local Tesseract binary or OCR package is required.
+
 # AI voice narration (Module 3 / Lamia)
-# unofficial, free, no API key -- see app/utils/tts.py for how it's used
-# and what it can/can't do.
 edge-tts>=6.1
 
 # word lookup (Module 2) + concept map extraction (Module 3 / Lamia)
-# NOTE: this was already imported by app/utils/dictionary.py but had
-# never actually been added here -- fixed while touching this file again.
-# after installing, run once: python -m nltk.downloader punkt averaged_perceptron_tagger wordnet
+# After installing, run once:
+# python -m nltk.downloader punkt averaged_perceptron_tagger wordnet
 nltk>=3.8
-=======
-fastapi>=0.111
-uvicorn[standard]>=0.30
-pydantic>=2.7
-pydantic-settings>=2.3
-python-multipart>=0.0.9
-email-validator>=2.1
-
-# auth
-pyjwt>=2.8
-passlib[bcrypt]>=1.7
-bcrypt==4.0.1
-
-# database — psycopg v3 with binary C extension + connection pool
-# "binary" provides the compiled C extension for performance;
-# "pool"   installs psycopg-pool (imported as psycopg_pool).
-psycopg[binary,pool]>=3.1
-
-# reference source ingestion (Group 1 / Mahidad)
-youtube-transcript-api>=0.6
-google-generativeai>=0.5
-yt-dlp>=2024.1   # playlist enumeration - see app/utils/youtube_playlist.py
-
-# ocr
-pytesseract>=0.3
-Pillow>=10.0
-pdf2image>=1.17.0
 
 # practice problem bank import (scripts/import_practice_problems.py --kaggle)
-# One-time importer, not used by the API at runtime. Needs Kaggle API
-# credentials: ~/.kaggle/kaggle.json, or KAGGLE_USERNAME + KAGGLE_KEY.
 kagglehub>=1.0
->>>>>>> origin/main

@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # realistic response shape without waiting on a key. See
     # app/services/teaching_style_service.py
     GEMINI_MODEL: str | None = None
+    OCR_SPACE_API_KEY: str | None = None
 
     # --- Practice problem bank import ---
     # Kaggle dataset the practice bank is imported from. Kept here rather
