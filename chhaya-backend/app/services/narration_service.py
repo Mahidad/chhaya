@@ -31,9 +31,9 @@ from app.services.narration_generation_service import rewrite_for_narration
 from app.utils.exceptions import NotFoundError
 from app.utils.tts import rate_for_pacing, synthesize, DEFAULT_VOICE
 
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "narrations"
-)
+# Rooted at settings.UPLOAD_ROOT so deployments can point it at a mounted
+# persistent disk -- a container's own filesystem is wiped on every deploy.
+UPLOAD_DIR = os.path.join(settings.UPLOAD_ROOT, "narrations")
 
 
 def _get_owned_content(db: psycopg.Connection, *, user_id: str, content_type: str, content_id: str):

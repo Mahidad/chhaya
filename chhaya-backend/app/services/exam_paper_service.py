@@ -8,10 +8,11 @@ from app.models.exam_paper import ExamPaper, ExamPaperStatus
 from app.repositories.exam_paper_repository import exam_paper_repository
 from app.utils.exceptions import NotFoundError
 from app.utils.ocr import extract_text_from_image
+from app.core.config import settings
 
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "exam_papers"
-)
+# Rooted at settings.UPLOAD_ROOT so deployments can point it at a mounted
+# persistent disk -- a container's own filesystem is wiped on every deploy.
+UPLOAD_DIR = os.path.join(settings.UPLOAD_ROOT, "exam_papers")
 
 
 def _save_upload(file_bytes: bytes, original_filename: str) -> str:

@@ -1,0 +1,52 @@
+# Render Blueprint for the Chhaya API.
+#
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repo. Render reads
+# this file and creates the service. Values marked sync:false are prompted for
+# on first deploy and never stored in git.
+#
+# NOTE ON UPLOADS: notes, exam papers, and narration audio are written to
+# UPLOAD_ROOT. A disk is declared below because Render wipes a service's own
+# filesystem on every deploy -- without it those files vanish. Disks require a
+# paid instance; on the free tier, remove the `disk:` block and expect uploads
+# to be lost on each deploy.
+services:
+  - type: web
+    name: chhaya-api
+    runtime: python
+    plan: starter
+    rootDir: chhaya-backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: chhaya-uploads
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.11"
+      - key: ENV
+        value: production
+      - key: UPLOAD_ROOT
+        value: /var/data/uploads
+      # Neon connection string, including ?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      # Your Vercel URL. Comma-separated for more than one.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      # The startup auto-import is development-only by design; seed the
+      # practice bank once from the Render shell instead:
+      #   python scripts/import_practice_problems.py
+      - key: PRACTICE_AUTO_IMPORT
+        value: "false"

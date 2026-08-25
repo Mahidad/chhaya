@@ -17,10 +17,11 @@ from app.models.note import Note, NoteType
 from app.repositories.note_repository import note_repository
 from app.services.course_service import get_chapter_for_user
 from app.utils.exceptions import NotFoundError
+from app.core.config import settings
 
-UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "notes"
-)
+# Rooted at settings.UPLOAD_ROOT so deployments can point it at a mounted
+# persistent disk -- a container's own filesystem is wiped on every deploy.
+UPLOAD_DIR = os.path.join(settings.UPLOAD_ROOT, "notes")
 
 
 def _save_upload(file_bytes: bytes, original_filename: str) -> str:
