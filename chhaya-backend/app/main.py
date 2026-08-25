@@ -27,6 +27,20 @@ async def lifespan(app: FastAPI):
     empty, and it does its work on a background thread so startup is not
     delayed. It never raises -- see app/services/practice_import_service.py.
     """
+    # A misconfigured deploy is by far the most common way this fails, and
+    # the raw psycopg error ("connection to 127.0.0.1:5432 refused") does not
+    # make it obvious that the real problem is a missing environment
+    # variable. Say so plainly before the pool times out.
+    if settings.ENV != "development" and "localhost" in settings.DATABASE_URL:
+        print(
+            "[startup] DATABASE_URL is still the local development default, so "
+            "this will try to reach a database on this container and fail."
+        )
+        print(
+            "[startup] Set DATABASE_URL in your host's environment settings to "
+            "your Postgres connection string, then redeploy."
+        )
+
     pool.open(wait=True)
     practice_import_service.maybe_import_in_background()
     yield
