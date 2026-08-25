@@ -550,6 +550,35 @@ DELETE FROM practice_problems
 WHERE  length(btrim(description)) < 50;
 
 -- ---------------------------------------------------------------------------
+-- practice_import_runs
+-- One row per attempt to (re)import the practice bank from Kaggle.
+--
+-- WHY THIS EXISTS: the bank is refreshed on a schedule so problems added to
+-- the upstream dataset show up here too. "Once a week" has to mean something
+-- across process restarts and across both triggers (the Render cron job and
+-- the app's own startup check), so the last successful run is recorded here
+-- rather than held in memory.
+--
+-- Also doubles as an audit trail: if the Practice tab suddenly has no new
+-- problems, this table says whether the import ran and what it did.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS practice_import_runs (
+    id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    dataset_slug  TEXT        NOT NULL,
+    trigger       TEXT        NOT NULL,             -- 'cron' | 'startup' | 'manual'
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at   TIMESTAMPTZ,                      -- NULL while still running
+    inserted      INTEGER     NOT NULL DEFAULT 0,
+    skipped       INTEGER     NOT NULL DEFAULT 0,
+    malformed     INTEGER     NOT NULL DEFAULT 0,
+    ok            BOOLEAN     NOT NULL DEFAULT FALSE,
+    error_message TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_import_runs_finished
+    ON practice_import_runs (finished_at DESC);
+
+-- ---------------------------------------------------------------------------
 -- practice_attempts
 -- One row per problem a student starts. Created on "Start" (which is when
 -- the timer begins -- started_at is the timer's source of truth, not a

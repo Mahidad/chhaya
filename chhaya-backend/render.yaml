@@ -45,8 +45,51 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.0-flash
-      # The startup auto-import is development-only by design; seed the
-      # practice bank once from the Render shell instead:
-      #   python scripts/import_practice_problems.py
+      # The weekly refresh is owned by the cron job below, so the web
+      # service does not need to do it. Flip to "true" only if you are on a
+      # plan without cron jobs -- then the API refreshes on startup instead,
+      # whenever the last successful run is older than PRACTICE_REFRESH_DAYS.
       - key: PRACTICE_AUTO_IMPORT
         value: "false"
+      - key: PRACTICE_REFRESH_DAYS
+        value: "7"
+      # Needed by whichever side runs the import. Get a token from
+      # kaggle.com -> Settings -> API -> Create New Token; the JSON contains
+      # both values.
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false
+
+  # ---------------------------------------------------------------------
+  # Weekly refresh of the practice bank from Kaggle.
+  #
+  # Runs the same importer the CLI does. It only ADDS problems the upstream
+  # dataset has gained -- rows already present are matched on title_slug and
+  # skipped, and nothing is updated or deleted, so student attempts pointing
+  # at existing problems are never disturbed.
+  #
+  # Sunday 03:00 UTC: off-peak, and a weekly cadence matches how rarely these
+  # datasets actually change.
+  # ---------------------------------------------------------------------
+  - type: cron
+    name: chhaya-practice-refresh
+    runtime: python
+    plan: starter
+    rootDir: chhaya-backend
+    schedule: "0 3 * * 0"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/import_practice_problems.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.11"
+      - key: ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: PRACTICE_DATASET_SLUG
+        value: gzipchrist/leetcode-problem-dataset
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false

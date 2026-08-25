@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     # imports it in the background so nobody has to run the script by hand.
     # See maybe_import_in_background() in app/services/practice_import_service.py.
     PRACTICE_AUTO_IMPORT: bool = True
+    # How often the bank is re-imported from Kaggle so problems added to the
+    # upstream dataset appear here too. The scheduled job in render.yaml is
+    # the reliable trigger; the startup check uses this same interval as a
+    # fallback. The import only ever ADDS -- existing problems and student
+    # attempts are never touched.
+    PRACTICE_REFRESH_DAYS: int = 7
 
     # --- Email reminders (Amiyo Module 2) ---
     # Leave unset during local development; the review page still works and

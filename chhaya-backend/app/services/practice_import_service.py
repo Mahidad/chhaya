@@ -39,6 +39,7 @@ import json
 import os
 import re
 import threading
+from datetime import datetime
 
 import psycopg
 
@@ -228,8 +229,12 @@ def resolve_csv(*, csv_path: str | None = None, slug: str | None = None) -> str:
 
 _LOG_PREFIX = "[practice-bank]"
 
-# Set once the thread has been started, so a reloader that re-imports this
-# module in the same process can't stack up parallel imports.
+# Postgres advisory lock id for "a practice import is running". Any integer
+# works as long as nothing else in this app picks the same one.
+_IMPORT_LOCK_ID = 8412771
+
+# Set once a thread has been started in THIS process, so a dev-server reload
+# that re-imports this module can't stack up parallel imports.
 _started = threading.Event()
 
 
@@ -239,75 +244,154 @@ def _has_kaggle_credentials() -> bool:
     return os.path.exists(os.path.expanduser("~/.kaggle/kaggle.json"))
 
 
-def _bank_is_empty() -> bool:
-    """Count the bank on a throwaway connection.
-
-    The pool exists by now, but borrowing from it here would compete with
-    the first real requests, and this is a single cheap COUNT.
-    """
-    with psycopg.connect(settings.DATABASE_URL, connect_timeout=10) as conn:
-        return practice_problem_repository.count(conn) == 0
-
-
-def _run_import() -> None:
-    try:
-        csv_path = resolve_csv()
-        print(f"{_LOG_PREFIX} importing from {csv_path}")
-        inserted, skipped, malformed = import_csv(csv_path)
-        print(
-            f"{_LOG_PREFIX} done -- {inserted} imported, {skipped} already present, "
-            f"{malformed} rows unusable."
+def last_successful_run(conn) -> datetime | None:
+    """When the bank was last refreshed successfully, or None if never."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT max(finished_at) FROM practice_import_runs WHERE ok IS TRUE"
         )
+        row = cur.fetchone()
+        return row[0] if row else None
+
+
+def refresh_is_due(conn) -> bool:
+    """True if the bank is empty, or the last refresh is older than the
+    configured interval. Uses the DATABASE's clock, not the process's, so a
+    cron container in one timezone and a web dyno in another agree."""
+    if practice_problem_repository.count(conn) == 0:
+        return True
+    last = last_successful_run(conn)
+    if last is None:
+        return True
+    with conn.cursor() as cur:
+        cur.execute("SELECT now() - %s > make_interval(days => %s)",
+                    (last, settings.PRACTICE_REFRESH_DAYS))
+        return cur.fetchone()[0]
+
+
+def refresh_bank(*, trigger: str, csv_path: str | None = None, slug: str | None = None) -> dict:
+    """Download the dataset and import anything new, recording the attempt.
+
+    THIS IS THE WEEKLY SYNC. It is safe to run repeatedly: import_csv matches
+    on title_slug and skips rows already present, so a re-run only ever adds
+    problems the upstream dataset has gained since last time. Nothing is
+    updated or deleted -- a problem that disappears upstream stays here,
+    because students may have attempts pointing at it.
+
+    An advisory lock keeps two triggers (cron firing while the web service
+    also decided it was due) from downloading and inserting at once. If the
+    lock is taken, this returns immediately rather than queueing.
+    """
+    conn = psycopg.connect(settings.DATABASE_URL, connect_timeout=15)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (_IMPORT_LOCK_ID,))
+            if not cur.fetchone()[0]:
+                return {"status": "skipped", "reason": "another import is already running"}
+
+        dataset = slug or settings.PRACTICE_DATASET_SLUG
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO practice_import_runs (dataset_slug, trigger) VALUES (%s, %s) RETURNING id",
+                (dataset, trigger),
+            )
+            run_id = cur.fetchone()[0]
+        conn.commit()
+
+        try:
+            path = resolve_csv(csv_path=csv_path, slug=slug)
+            inserted, skipped, malformed = import_csv(path)
+        except Exception as exc:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE practice_import_runs SET finished_at = NOW(), ok = FALSE,"
+                    " error_message = %s WHERE id = %s",
+                    (str(exc)[:2000], run_id),
+                )
+            conn.commit()
+            raise
+
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE practice_import_runs SET finished_at = NOW(), ok = TRUE,"
+                " inserted = %s, skipped = %s, malformed = %s WHERE id = %s",
+                (inserted, skipped, malformed, run_id),
+            )
+        conn.commit()
+        return {"status": "ok", "inserted": inserted, "skipped": skipped,
+                "malformed": malformed, "dataset": dataset}
+    finally:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_advisory_unlock(%s)", (_IMPORT_LOCK_ID,))
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def _run_refresh(trigger: str) -> None:
+    try:
+        result = refresh_bank(trigger=trigger)
+        if result["status"] == "skipped":
+            print(f"{_LOG_PREFIX} {result['reason']}")
+        else:
+            print(
+                f"{_LOG_PREFIX} refresh done -- {result['inserted']} new problem(s), "
+                f"{result['skipped']} already present, {result['malformed']} unusable."
+            )
     except ImportError_ as exc:
-        print(f"{_LOG_PREFIX} skipped: {exc}")
-    except Exception as exc:  # never let a seeding problem take down the API
-        print(f"{_LOG_PREFIX} skipped after an unexpected error: {exc!r}")
+        print(f"{_LOG_PREFIX} refresh skipped: {exc}")
+    except Exception as exc:  # never let a refresh take down the API
+        print(f"{_LOG_PREFIX} refresh failed: {exc!r}")
 
 
 def maybe_import_in_background() -> None:
-    """Import the bank if it's empty and we're able to. Never raises.
+    """Refresh the bank on startup if one is due. Never raises.
 
-    Four guards, all of which must pass:
-      1. PRACTICE_AUTO_IMPORT is on (default true; set false to opt out)
-      2. ENV is development -- production DBs get seeded deliberately, not by
-         whichever process happened to boot first
-      3. the bank is empty -- so it runs once, not on every reload
-      4. Kaggle credentials exist -- otherwise we'd stall on a network call
-         that is going to 401 anyway
+    WHEN THIS RUNS: PRACTICE_AUTO_IMPORT is on, Kaggle credentials exist, and
+    either the bank is empty or the last successful refresh is older than
+    PRACTICE_REFRESH_DAYS.
 
-    The work happens on a daemon thread: the download plus a ~1700-row insert
+    This is the fallback trigger. The reliable one is the scheduled job in
+    render.yaml, which runs weekly whether or not anyone hits the site. Both
+    call refresh_bank(), both take the same advisory lock, and both are
+    idempotent -- so running both is harmless, and running only one still
+    keeps the bank current.
+
+    The work happens on a daemon thread: the download plus the insert pass
     takes well over a minute, and blocking the lifespan would mean the API
-    refuses connections for that whole time. Daemon means Ctrl-C still exits
-    immediately.
+    refuses connections for that whole time.
     """
     try:
         if not settings.PRACTICE_AUTO_IMPORT:
             return
-        if settings.ENV != "development":
-            return
         if _started.is_set():
             return
 
-        if not _bank_is_empty():
-            return
+        with psycopg.connect(settings.DATABASE_URL, connect_timeout=10) as conn:
+            if not refresh_is_due(conn):
+                return
 
         if not _has_kaggle_credentials():
+            print(f"{_LOG_PREFIX} a refresh is due but no Kaggle credentials were found.")
             print(
-                f"{_LOG_PREFIX} the problem bank is empty and no Kaggle credentials were "
-                "found, so the Practice tab will have nothing to show.\n"
                 f"{_LOG_PREFIX}   Fix: get a token at kaggle.com -> Settings -> API -> "
                 "Create New Token, save it to ~/.kaggle/kaggle.json (or set "
-                "KAGGLE_USERNAME + KAGGLE_KEY), then restart.\n"
-                f"{_LOG_PREFIX}   Or import manually: python scripts/import_practice_problems.py"
+                "KAGGLE_USERNAME + KAGGLE_KEY), then restart."
+            )
+            print(
+                f"{_LOG_PREFIX}   Or import manually: "
+                "python scripts/import_practice_problems.py"
             )
             return
 
         _started.set()
         print(
-            f"{_LOG_PREFIX} bank is empty -- importing "
-            f"{settings.PRACTICE_DATASET_SLUG} in the background. "
-            "The API is usable now; Practice fills in shortly."
+            f"{_LOG_PREFIX} refresh due -- importing {settings.PRACTICE_DATASET_SLUG} "
+            "in the background. The API is usable now."
         )
-        threading.Thread(target=_run_import, name="practice-bank-import", daemon=True).start()
+        threading.Thread(
+            target=_run_refresh, args=("startup",), name="practice-bank-refresh", daemon=True
+        ).start()
     except Exception as exc:
         print(f"{_LOG_PREFIX} could not start: {exc!r}")

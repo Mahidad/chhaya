@@ -52,17 +52,20 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        csv_path = practice_import_service.resolve_csv(
-            csv_path=args.csv_path, slug=args.kaggle
+        result = practice_import_service.refresh_bank(
+            trigger="manual", csv_path=args.csv_path, slug=args.kaggle
         )
     except practice_import_service.ImportError_ as exc:
         parser.error(str(exc))
 
-    print(f"Importing from {csv_path}")
-    inserted, skipped, malformed = practice_import_service.import_csv(csv_path)
+    if result["status"] == "skipped":
+        print(f"Nothing to do: {result['reason']}")
+        return 0
+
     print(
-        f"Imported {inserted} problems. Skipped {skipped} already present. "
-        f"{malformed} rows unusable."
+        f"Imported {result['inserted']} new problems from {result['dataset']}. "
+        f"Skipped {result['skipped']} already present. "
+        f"{result['malformed']} rows unusable."
     )
     return 0
 
