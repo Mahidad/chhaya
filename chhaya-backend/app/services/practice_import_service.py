@@ -116,6 +116,14 @@ def fetch_from_kaggle(slug: str) -> str:
             "kagglehub is not installed -- run `pip install -r requirements.txt`."
         ) from exc
 
+    # kagglehub reads credentials from os.environ, but pydantic-settings loads
+    # .env values only into the settings object.  Bridge the gap.
+    from app.core.config import settings as _settings
+    if _settings.KAGGLE_USERNAME and not os.getenv("KAGGLE_USERNAME"):
+        os.environ["KAGGLE_USERNAME"] = _settings.KAGGLE_USERNAME
+    if _settings.KAGGLE_KEY and not os.getenv("KAGGLE_KEY"):
+        os.environ["KAGGLE_KEY"] = _settings.KAGGLE_KEY
+
     try:
         path = kagglehub.dataset_download(slug)
     except Exception as exc:
@@ -239,6 +247,9 @@ _started = threading.Event()
 
 
 def _has_kaggle_credentials() -> bool:
+    from app.core.config import settings as _settings
+    if _settings.KAGGLE_USERNAME and _settings.KAGGLE_KEY:
+        return True
     if os.getenv("KAGGLE_USERNAME") and os.getenv("KAGGLE_KEY"):
         return True
     return os.path.exists(os.path.expanduser("~/.kaggle/kaggle.json"))

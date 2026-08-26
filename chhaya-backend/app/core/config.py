@@ -93,6 +93,12 @@ class Settings(BaseSettings):
     OCR_SPACE_API_KEY: str | None = None
 
     # --- Practice problem bank import ---
+    # Kaggle credentials for downloading the practice bank dataset.
+    # Get a token at kaggle.com -> Settings -> API -> Create New Token.
+    # Alternatively, place kaggle.json in ~/.kaggle/kaggle.json.
+    KAGGLE_USERNAME: str | None = None
+    KAGGLE_KEY: str | None = None
+
     # Kaggle dataset the practice bank is imported from. Kept here rather
     # than as a command-line argument so a teammate can run
     # `python scripts/import_practice_problems.py` with no arguments and get

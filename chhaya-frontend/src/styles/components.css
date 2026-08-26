@@ -2047,3 +2047,243 @@
 .concept-card:active {
   cursor: grabbing;
 }
+
+/* ============================================================================
+   RESPONSIVE LAYER
+
+   WHY THIS EXISTS AS ONE BLOCK AT THE END: everything above came from a fixed
+   1280x720 Figma frame (see the note at the top of this file), so the layout
+   assumes a desktop-width window -- a 232px sidebar sitting beside the content
+   in a flex row, 32px page gutters, and panes with min-width in the 200-320px
+   range. On a 375px phone the sidebar alone takes nearly two thirds of the
+   screen and everything to its right is squeezed into a column too narrow to
+   set text in, which is what makes sentences break mid-word.
+
+   Rather than rewrite those rules (they are correct on desktop, and 30+ page
+   components depend on them), this layer overrides only what breaks, at three
+   widths. Keeping it in one place means a page added later is responsive
+   without its author doing anything, as long as it uses the shared classes.
+
+   Breakpoints:
+     <= 1100px  laptop/tablet -- tighter gutters, narrower sidebar
+     <=  760px  phone/small tablet -- sidebar becomes a top bar, all
+                side-by-side layouts stack
+     <=  460px  small phone -- minimum gutters, denser controls
+   ============================================================================ */
+
+/* Long unbroken tokens -- pasted URLs, code identifiers, LeetCode slugs -- are
+   the other half of "mangled sentences". Without this they force a container
+   wider than the screen and drag the whole page into horizontal scroll. */
+.content,
+.content-flush {
+  overflow-wrap: break-word;
+}
+
+/* Nothing should ever make the page itself scroll sideways. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ---------- <= 1100px: laptop / tablet ---------- */
+@media (max-width: 1100px) {
+  .sidebar {
+    width: 200px;
+    padding: 20px 12px;
+  }
+  .content {
+    padding: 20px 20px;
+  }
+  .topbar {
+    padding: 0 20px;
+  }
+  .searchbar {
+    width: 180px;
+  }
+  /* Two code panes side by side stop being readable well before they stop
+     fitting. RAISING the min-width is what makes them wrap sooner: with
+     flex-wrap, a pair only sits on one line while both can have their
+     minimum, so a bigger minimum forces the stack earlier. Lowering it --
+     the intuitive-looking move -- keeps them side by side down to ~270px
+     each, which is unreadable for code. */
+  .conv-pane {
+    min-width: 340px;
+  }
+}
+
+/* ---------- <= 900px: the Code Studio two-column layout gives up ----------
+   Above this the folder list can sit beside the workspace. Below it, 220px of
+   folder list leaves the panes a container narrower than their own minimum,
+   so they overflow it -- which the page-level overflow-x:hidden then CLIPS
+   rather than scrolls, silently hiding the right-hand pane. Stacking returns
+   the full width to the workspace. */
+@media (max-width: 900px) {
+  .studio-layout {
+    flex-direction: column;
+  }
+  .folder-sidebar,
+  .studio-main {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ---------- <= 760px: phone ---------- */
+@media (max-width: 760px) {
+  /* The shell stops being a sidebar + content row and becomes a stack. */
+  .app {
+    flex-direction: column;
+  }
+
+  /* Sidebar becomes a horizontally scrollable strip across the top. Nav items
+     keep their labels -- icon-only would need tooltips that do not exist on
+     touch -- and the strip scrolls rather than wrapping into several rows. */
+  .sidebar {
+    width: 100%;
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar .nav {
+    flex-direction: row;
+    gap: 6px;
+    flex: 1;
+  }
+  .nav-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+    /* The base rule is width:100%, which is right for a vertical sidebar and
+       disastrous in a horizontal strip: every item claims the full row and
+       the nav ends up thousands of pixels long. Size to the label instead. */
+    width: auto;
+  }
+  /* Section heading and the decorative credits card are desktop furniture --
+     in a single-row strip they are just noise competing for width. */
+  .nav-label,
+  .plan-card {
+    display: none;
+  }
+  .sidebar-foot {
+    flex-direction: row;
+    margin-left: auto;
+  }
+  .sidebar-foot .nav-item {
+    margin-top: 0 !important;
+  }
+  .brand {
+    flex-shrink: 0;
+  }
+  .brand-sub {
+    display: none;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .topbar-right {
+    margin-left: auto;
+  }
+  .searchbar {
+    width: 100%;
+    order: 3;
+  }
+
+  .content {
+    padding: 16px 12px;
+  }
+
+  /* Title and its action buttons stop competing for one line. */
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Every side-by-side arrangement becomes a stack. The min-widths above are
+     what actually forced horizontal scroll, so they have to go to 0. */
+  .studio-layout,
+  .conv-panes,
+  .split,
+  .row-2 {
+    flex-direction: column;
+  }
+  .folder-sidebar,
+  .studio-main,
+  .conv-pane,
+  .col-form,
+  .row-2 .field {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  /* Rows of controls wrap instead of overflowing. */
+  .card-head,
+  .save-controls,
+  .conv-mode-bar,
+  .conv-foot {
+    flex-wrap: wrap;
+  }
+  /* A row of mode tabs is the one place scrolling beats wrapping -- wrapping
+     turns five tabs into three ragged rows. */
+  .conv-mode-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .conv-mode-bar .mode-btn {
+    flex-shrink: 0;
+  }
+
+  /* Code and traces keep their own scrollbar rather than widening the page. */
+  .code-lines,
+  .chart-box,
+  .list-card {
+    overflow-x: auto;
+  }
+
+  /* Dialogs get the screen, minus a margin. */
+  .dialog {
+    width: 100%;
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Anything still pinned to a desktop pixel width. */
+  .conv-select,
+  .conv-select-right,
+  .save-title-input,
+  .searchbar input {
+    max-width: 100%;
+  }
+}
+
+/* ---------- <= 460px: small phone ---------- */
+@media (max-width: 460px) {
+  .content {
+    padding: 12px 10px;
+  }
+  .page-title {
+    font-size: 20px;
+  }
+  .page-actions > * {
+    flex: 1 1 auto;
+  }
+  .card-head {
+    row-gap: 6px;
+  }
+  /* Bars in the practice-activity chart get unreadably thin below this. */
+  .bar-chart {
+    min-width: 320px;
+  }
+}

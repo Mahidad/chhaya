@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, StringConstraints
 
 
 class ReferenceSourceCreate(BaseModel):
@@ -14,8 +16,13 @@ class ReferenceSourceCreate(BaseModel):
     force: bool = False
 
 class ReferenceSourceUpdate(BaseModel):
-    """Payload for renaming a reference source."""
-    title: str
+    """Payload for renaming a reference source.
+
+    min_length rejects "" and strip_whitespace turns a title of only spaces
+    into "" first, so both are refused with a 422 instead of being stored as
+    an unnamed source.
+    """
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
 
 
 class VideoOut(BaseModel):

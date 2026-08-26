@@ -297,6 +297,26 @@ def list_sources_for_user(
     return reference_source_repository.list_for_user(db, user_id=user_id)
 
 
+def rename_source(
+    db: psycopg.Connection, *, user_id: str, source_id: str, title: str
+) -> ReferenceSource:
+    """Give a reference source a new display title.
+
+    Ownership is checked first via get_source_for_user, so one user cannot
+    rename another's source -- same pattern as delete_source below.
+
+    Only the title changes. The URL, its videos, and the derived teacher
+    profiles all stay put: this is a label, not a re-ingest.
+
+    Blank titles are rejected by ReferenceSourceUpdate before reaching here,
+    so this only trims incidental whitespace.
+    """
+    source = get_source_for_user(db, user_id=user_id, source_id=source_id)
+    return reference_source_repository.update(
+        db, db_obj=source, obj_in={"title": title.strip()}
+    )
+
+
 def delete_source(db: psycopg.Connection, *, user_id: str, source_id: str) -> None:
     source = get_source_for_user(db, user_id=user_id, source_id=source_id)
     reference_source_repository.delete(db, id=source.id)
