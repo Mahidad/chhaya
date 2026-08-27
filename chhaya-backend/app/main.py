@@ -44,6 +44,23 @@ async def lifespan(app: FastAPI):
             "your Postgres connection string, then redeploy."
         )
 
+    # Uploads written inside the application directory do not survive a
+    # deploy or a restart -- the container filesystem is rebuilt each time.
+    # The rows in notes/exam_papers/narrations stay, so the feature looks
+    # fine until someone opens an older file and it 404s.
+    if settings.ENV != "development" and os.path.abspath(
+        settings.UPLOAD_ROOT
+    ).startswith(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))):
+        print(
+            "[startup] UPLOAD_ROOT points inside the application directory "
+            f"({settings.UPLOAD_ROOT}), which is wiped on every deploy."
+        )
+        print(
+            "[startup] Point it at a mounted persistent disk (e.g. "
+            "UPLOAD_ROOT=/var/data/uploads) or uploaded notes and exam papers "
+            "will disappear."
+        )
+
     pool.open(wait=True)
     practice_import_service.maybe_import_in_background()
     yield
@@ -116,6 +133,16 @@ def integrations_check():
         "ocr_space": bool(settings.OCR_SPACE_API_KEY),
         "resend_email": bool(settings.RESEND_API_KEY and settings.RESEND_FROM_EMAIL),
         "kaggle": bool(os.getenv("KAGGLE_USERNAME") and os.getenv("KAGGLE_KEY")),
+        # False means YouTube requests egress from this host's own IP, which
+        # datacenter providers get blocked on.
+        "youtube_proxy": bool(
+            settings.YOUTUBE_PROXY_URL
+            or (settings.WEBSHARE_PROXY_USERNAME and settings.WEBSHARE_PROXY_PASSWORD)
+        ),
+        # False means uploads live in the app directory and vanish on deploy.
+        "uploads_persistent": not os.path.abspath(settings.UPLOAD_ROOT).startswith(
+            os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        ),
         "wordnet_corpus": wordnet,
         "upload_root": settings.UPLOAD_ROOT,
     }

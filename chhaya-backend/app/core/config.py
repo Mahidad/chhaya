@@ -92,6 +92,21 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str | None = None
     OCR_SPACE_API_KEY: str | None = None
 
+    # --- YouTube transcript fetching ---
+    # YouTube blocks datacenter IP ranges with "Sign in to confirm you're not
+    # a bot", so transcript fetching works from a laptop and fails from any
+    # cloud host (Render, Railway, Fly, AWS...). There is no API key or
+    # setting on YouTube's side that lifts this -- the only reliable fix is to
+    # egress from a residential IP, i.e. a proxy.
+    #
+    # Leave unset for local development. In production set one of:
+    #   YOUTUBE_PROXY_URL=http://user:pass@host:port     (any HTTP proxy)
+    #   WEBSHARE_PROXY_USERNAME / WEBSHARE_PROXY_PASSWORD (Webshare rotating
+    #   residential, which youtube-transcript-api supports natively)
+    YOUTUBE_PROXY_URL: str | None = None
+    WEBSHARE_PROXY_USERNAME: str | None = None
+    WEBSHARE_PROXY_PASSWORD: str | None = None
+
     # --- Practice problem bank import ---
     # Kaggle credentials for downloading the practice bank dataset.
     # Get a token at kaggle.com -> Settings -> API -> Create New Token.

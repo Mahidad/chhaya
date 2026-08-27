@@ -53,6 +53,47 @@ def clean_transcript_text(raw_text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+# --- proxy plumbing -------------------------------------------------------
+# Every YouTube request below goes through these two helpers so that the
+# datacenter-IP block has exactly one place to be fixed. See the comment on
+# YOUTUBE_PROXY_URL in app/core/config.py for why a proxy is the only fix.
+
+def _transcript_api():
+    """YouTubeTranscriptApi, routed through a proxy when one is configured."""
+    from app.core.config import settings
+
+    if settings.WEBSHARE_PROXY_USERNAME and settings.WEBSHARE_PROXY_PASSWORD:
+        from youtube_transcript_api.proxies import WebshareProxyConfig
+
+        return YouTubeTranscriptApi(
+            proxy_config=WebshareProxyConfig(
+                proxy_username=settings.WEBSHARE_PROXY_USERNAME,
+                proxy_password=settings.WEBSHARE_PROXY_PASSWORD,
+            )
+        )
+    if settings.YOUTUBE_PROXY_URL:
+        from youtube_transcript_api.proxies import GenericProxyConfig
+
+        return YouTubeTranscriptApi(
+            proxy_config=GenericProxyConfig(
+                http_url=settings.YOUTUBE_PROXY_URL,
+                https_url=settings.YOUTUBE_PROXY_URL,
+            )
+        )
+    return YouTubeTranscriptApi()
+
+
+def _is_bot_block(exc: Exception) -> bool:
+    """Whether this failure is YouTube refusing the server's IP.
+
+    Worth distinguishing because it is not a property of the video -- the same
+    URL works from a laptop -- so telling the user "no transcript available"
+    would send them looking for a problem that is not there.
+    """
+    text = str(exc).lower()
+    return "sign in to confirm" in text or "not a bot" in text or "blocked" in text
+
+
 def fetch_transcript_text_ytdlp(video_id: str) -> str:
     """Fallback method using yt-dlp to extract auto-generated or manual subtitles when youtube-transcript-api is blocked."""
     import yt_dlp
@@ -60,6 +101,8 @@ def fetch_transcript_text_ytdlp(video_id: str) -> str:
     import json
 
     url = f"https://www.youtube.com/watch?v={video_id}"
+    from app.core.config import settings
+
     ydl_opts = {
         "skip_download": True,
         "writesubtitles": True,
@@ -68,6 +111,8 @@ def fetch_transcript_text_ytdlp(video_id: str) -> str:
         "quiet": True,
         "no_warnings": True,
     }
+    if settings.YOUTUBE_PROXY_URL:
+        ydl_opts["proxy"] = settings.YOUTUBE_PROXY_URL
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -129,7 +174,7 @@ def fetch_transcript_text(
     # First, try fetching directly using youtube_transcript_api
     try:
         langs = languages or ["en"]
-        fetched = YouTubeTranscriptApi().fetch(video_id, languages=langs)
+        fetched = _transcript_api().fetch(video_id, languages=langs)
 
         total_duration = sum(getattr(snippet, "duration", 0) for snippet in fetched)
         if skip_short and total_duration > 0 and total_duration < 180:
@@ -149,7 +194,7 @@ def fetch_transcript_text(
             ) from exc
         # Check fallback language list via youtube_transcript_api
         try:
-            transcript_list = YouTubeTranscriptApi().list(video_id)
+            transcript_list = _transcript_api().list(video_id)
             first_transcript = next(iter(transcript_list))
             fetched = first_transcript.fetch()
             raw = " ".join(snippet.text for snippet in fetched)
@@ -163,9 +208,24 @@ def fetch_transcript_text(
     # Try yt-dlp subtitle extraction fallback
     try:
         return fetch_transcript_text_ytdlp(video_id)
-    except TranscriptUnavailableError:
+    except TranscriptUnavailableError as exc:
+        if _is_bot_block(exc):
+            raise TranscriptUnavailableError(
+                "YouTube is blocking transcript requests from this server's IP "
+                "address (\"Sign in to confirm you're not a bot\"). This is a "
+                "hosting limitation, not a problem with the video -- the same "
+                "link works from a home connection. Set YOUTUBE_PROXY_URL (or "
+                "the Webshare credentials) to route these requests through a "
+                "residential IP."
+            ) from exc
         raise
     except Exception as exc:
+        if _is_bot_block(exc):
+            raise TranscriptUnavailableError(
+                "YouTube is blocking transcript requests from this server's IP "
+                "address. Set YOUTUBE_PROXY_URL to route them through a "
+                "residential IP."
+            ) from exc
         raise TranscriptUnavailableError(
             f"Could not retrieve transcript for video {video_id}: {exc}"
         ) from exc
