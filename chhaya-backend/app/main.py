@@ -1,12 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import pool
+from app.utils.exceptions import ExternalServiceError
 from app.services import practice_import_service
 
 
@@ -64,6 +66,22 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
     return RedirectResponse(url="/docs")
+
+@app.exception_handler(ExternalServiceError)
+def external_service_error_handler(request: Request, exc: ExternalServiceError):
+    """Turn an upstream AI/API failure into 503, not 500.
+
+    Gemini returns 503 UNAVAILABLE under load often enough that any feature
+    calling it will fail sometimes. Only quizzes.py caught this, so everywhere
+    else -- reference source ingestion, style analysis, guide generation --
+    surfaced an opaque "500 Internal Server Error" that reads like an
+    application bug rather than a busy upstream service.
+
+    503 also tells the frontend the request is worth retrying, which a 500
+    does not.
+    """
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
 
 @app.get("/health", tags=["health"])
 def health_check():

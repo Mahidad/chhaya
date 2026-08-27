@@ -46,8 +46,11 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      # Model names get retired -- gemini-2.0-flash and 2.5-flash both now
+      # 404. If AI calls start failing with NOT_FOUND, check the current
+      # list at ai.google.dev/gemini-api/docs/models and update this.
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-3.6-flash
       # OCR.Space extracts text from uploaded exam papers and image notes.
       # Free key: ocr.space/ocrapi -> Register. Without it every upload fails
       # with "OCR.Space is not configured".
