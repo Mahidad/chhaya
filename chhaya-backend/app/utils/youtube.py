@@ -58,6 +58,28 @@ def clean_transcript_text(raw_text: str) -> str:
 # datacenter-IP block has exactly one place to be fixed. See the comment on
 # YOUTUBE_PROXY_URL in app/core/config.py for why a proxy is the only fix.
 
+def _proxy_url() -> str | None:
+    """One proxy URL for every YouTube call, however it was configured.
+
+    The Webshare credentials and YOUTUBE_PROXY_URL have to converge here
+    because yt-dlp takes a plain URL and knows nothing about
+    WebshareProxyConfig. Without this, setting only the Webshare pair would
+    proxy the transcript API but let the yt-dlp fallback egress from the
+    server's own blocked IP -- so the first attempt would work and the
+    fallback would still fail with the bot message.
+    """
+    from app.core.config import settings
+
+    if settings.WEBSHARE_PROXY_USERNAME and settings.WEBSHARE_PROXY_PASSWORD:
+        from youtube_transcript_api.proxies import WebshareProxyConfig
+
+        return WebshareProxyConfig(
+            proxy_username=settings.WEBSHARE_PROXY_USERNAME,
+            proxy_password=settings.WEBSHARE_PROXY_PASSWORD,
+        ).url
+    return settings.YOUTUBE_PROXY_URL
+
+
 def _transcript_api():
     """YouTubeTranscriptApi, routed through a proxy when one is configured."""
     from app.core.config import settings
@@ -101,8 +123,6 @@ def fetch_transcript_text_ytdlp(video_id: str) -> str:
     import json
 
     url = f"https://www.youtube.com/watch?v={video_id}"
-    from app.core.config import settings
-
     ydl_opts = {
         "skip_download": True,
         "writesubtitles": True,
@@ -111,8 +131,9 @@ def fetch_transcript_text_ytdlp(video_id: str) -> str:
         "quiet": True,
         "no_warnings": True,
     }
-    if settings.YOUTUBE_PROXY_URL:
-        ydl_opts["proxy"] = settings.YOUTUBE_PROXY_URL
+    proxy = _proxy_url()
+    if proxy:
+        ydl_opts["proxy"] = proxy
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
