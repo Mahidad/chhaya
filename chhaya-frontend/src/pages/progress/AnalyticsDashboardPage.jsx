@@ -39,10 +39,18 @@ export default function AnalyticsDashboardPage() {
   const [activeSessionMinutes, setActiveSessionMinutes] = useState(0);
 
   function refreshActiveSessionMinutes() {
+    const lastHeartbeat = Number(sessionStorage.getItem("chhaya_last_heartbeat_ms"));
     const startedAt = Number(sessionStorage.getItem("chhaya_session_start_ms"));
+
+    // Use the last heartbeat as the baseline when available.
+    // totals.study_minutes from the DB already includes everything up to
+    // the last heartbeat, so we only count the unsaved tail (< 60 s → 0 min)
+    // to avoid double-counting that causes skipped-minute jumps.
+    const baseline = lastHeartbeat > 0 ? lastHeartbeat : startedAt;
+
     setActiveSessionMinutes(
-      Number.isFinite(startedAt) && startedAt > 0
-        ? Math.floor((Date.now() - startedAt) / 60_000)
+      Number.isFinite(baseline) && baseline > 0
+        ? Math.floor((Date.now() - baseline) / 60_000)
         : 0
     );
   }
