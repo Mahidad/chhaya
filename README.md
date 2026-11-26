@@ -7,7 +7,9 @@
 **Learn anything in the voice of the teacher who explains it best.** Chhaya takes a teacher's lectures (YouTube videos or playlists), pulls out their *teaching style*, such as pacing, vocabulary level, use of analogies, example density and how ideas are sequenced, and reuses that style to teach new topics. That includes topics the teacher never covered. Around this core, Chhaya brings a student's whole study workflow into one place: notes, study guides, narration, quizzes, spaced-repetition reviews, past exam papers, likely exam questions, study groups and a full Code Studio.
 
 **Course:** CSE471 – System Analysis and Design, BRAC University (Summer 2026)
+
 **Team (Lab Section 14, Group 05):** Md Mahidad Hossain, Lamia Salsabil Mim, Omar Faruk, Amiyo Bhowmik
+
 **Live demo:** [Frontend (Vercel)](https://chhaya-blond.vercel.app/) · [API (Render)](https://chhaya-eo3w.onrender.com/). The API is on a free tier, so the first request after a while can take up to a minute while it wakes up.
 
 ![Style profile extracted from a lecture](docs/screenshots/03_style_profile.png)
